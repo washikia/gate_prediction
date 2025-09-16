@@ -177,6 +177,22 @@ def hysteresis_thresholding(image: np.ndarray, low_threshold: float=0.1, high_th
 
 
 
+# Canny Edge Detection
+def canny_edge_detection(image: Image, low_threshold: float=0.1, high_threshold: float=0.2) -> np.ndarray:
+    '''
+    This function applies the Canny edge detection algorithm to the input image.
+    '''
+    blurred = apply_gaussian_blur(image, 5, 1.0)
+    grad_x, grad_y, edges = apply_sobel_filter(blurred)
+    direction = sobel_direction(grad_x, grad_y)
+
+    nms_edges = non_max_suppression(edges, direction)
+    hyst_edges = hysteresis_thresholding(nms_edges, low_threshold, high_threshold)
+
+    return hyst_edges
+
+
+
 """
 # test  data\2025\25M1710D_front.png
 img = Image.open("../../data/2025/25M1710D_front.png").convert("L")
