@@ -21,7 +21,7 @@ def pad_image(image: np.ndarray, kernel_size: int) -> np.ndarray:
     '''
     pad = kernel_size // 2
 
-    padded_image = np.pad(image, ((pad, pad), (pad, pad)), mode='constant')
+    padded_image = np.pad(image, ((pad, pad), (pad, pad)), mode='reflect')
 
     return padded_image
 
@@ -38,12 +38,11 @@ def gaussian_kernel(size: int, sigma: float) -> np.ndarray:
 
     for y in range(-centre, centre + 1, 1):
         for x in range(-centre, centre + 1, 1):
-            kernel[x+1, y+1] = (1 / (2 * np.pi * sigma**2)) * np.exp(-((x**2 + y**2) / (2 * sigma**2)))
+            kernel[x+centre, y+centre] = (1 / (2 * np.pi * sigma**2)) * np.exp(-((x**2 + y**2) / (2 * sigma**2)))
 
     kernel /= np.sum(kernel)
 
     return kernel
-
 
 
 # apply kernel
@@ -178,11 +177,11 @@ def hysteresis_thresholding(image: np.ndarray, low_threshold: float=0.1, high_th
 
 
 # Canny Edge Detection
-def canny_edge_detection(image: Image, low_threshold: float=0.1, high_threshold: float=0.2) -> np.ndarray:
+def canny_edge_detection(image: Image, kernel_size: int=5, low_threshold: float=0.1, high_threshold: float=0.2) -> np.ndarray:
     '''
     This function applies the Canny edge detection algorithm to the input image.
     '''
-    blurred = apply_gaussian_blur(image, 5, 1.0)
+    blurred = apply_gaussian_blur(image, kernel_size, 1.0)
     grad_x, grad_y, edges = apply_sobel_filter(blurred)
     direction = sobel_direction(grad_x, grad_y)
 
@@ -193,9 +192,10 @@ def canny_edge_detection(image: Image, low_threshold: float=0.1, high_threshold:
 
 
 
+
 """
 # test  data\2025\25M1710D_front.png
-img = Image.open("../../data/2025/25M1710D_front.png").convert("L")
+img = Image.open("../data/2025/25M1710D_front.png").convert("L")
 img = np.array(img)
 blurred = apply_gaussian_blur(img, 5, 1.0)
 grad_x, grad_y, edges = apply_sobel_filter(blurred)
@@ -249,10 +249,10 @@ plt.axis('off')
 
 plt.subplot(3, 3, 8)
 plt.title("Edges (Hysteresis)")
-plt.imshow(hyst_edges, cmap='hsv')
+plt.imshow(hyst_edges, cmap='gray')
 plt.axis('off')
 
 plt.tight_layout()
 plt.show()
-# ...existing
+
 """
