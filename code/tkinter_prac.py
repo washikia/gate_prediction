@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 
 root = tk.Tk()
 
@@ -51,10 +52,15 @@ button.pack(pady=10)
 menu_bar = tk.Menu(root)
 root.config(menu=menu_bar)
 
-file_menu = tk.Menu(menu_bar, tear_off=0)
-menu_bar.add_cascade(label="File", menu=file_menu)
 
-help_menu = tk.Menu(menu_bar, tear_off=0)
+def show_about():
+    messagebox.showinfo("About", "MyApp v1.0\nCreated with Tkinter")
+
+
+file_menu = tk.Menu(menu_bar, tearoff=0)
+menu_bar.add_showinfo("About", )
+
+help_menu = tk.Menu(menu_bar, tearoff=0)
 menu_bar.add_cascade(label="Help", menu=help_menu)
 
 file_menu.add_command(label="Exit", command=root.quit)
@@ -63,6 +69,9 @@ help_menu.add_command(label="About", command=lambda: print("This is a survey for
 toolbar = tk.Frame(root, bd=1, relief="raised")
 btn_new = tk.Button(toolbar, text="New")
 btn_open = tk.Button(toolbar, text="Open")
+
+btn_new.pack(side="left", padx=2, pady=2)
+btn_open.pack(side="left", padx=2, pady=2)
 
 toolbar.pack(side="top", fill="x")
 
