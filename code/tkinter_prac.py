@@ -58,7 +58,7 @@ def show_about():
 
 
 file_menu = tk.Menu(menu_bar, tearoff=0)
-menu_bar.add_showinfo("About", )
+menu_bar.add_cascade(label="File", menu=file_menu)
 
 help_menu = tk.Menu(menu_bar, tearoff=0)
 menu_bar.add_cascade(label="Help", menu=help_menu)
