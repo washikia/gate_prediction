@@ -3,7 +3,7 @@ from tkinter import ttk
 from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 import json
-import os
+import os, sys
 import glob
 
 class Annotator:
@@ -39,11 +39,11 @@ class Annotator:
         self.year_combo.pack(side="left", padx=5, pady=5)
         self.year_combo.bind("<<ComboboxSelected>>", self.on_year_change)
 
-        self.undo_image = Image.open("./asset/undo.png")
+        self.undo_image = Image.open(self.resource_path("./asset/undo.png"))
         self.undo_image = self.undo_image.resize((15, 15), Image.Resampling.LANCZOS)
         self.undo_image = ImageTk.PhotoImage(self.undo_image)
 
-        self.redo_image = Image.open("./asset/redo.png")
+        self.redo_image = Image.open(self.resource_path("./asset/redo.png"))
         self.redo_image = self.redo_image.resize((15, 15), Image.Resampling.LANCZOS)
         self.redo_image = ImageTk.PhotoImage(self.redo_image)
 
@@ -52,6 +52,10 @@ class Annotator:
 
         redo_btn = tk.Button(top_frame, image=self.redo_image, command=self.redo_last_point)
         redo_btn.pack(side="right", padx=2)
+
+        # Progress label for x/y labeled images
+        self.progress_label = tk.Label(top_frame, text="")
+        self.progress_label.pack(side="left", padx=10)
 
         # Canvas
         self.canvas_frame = tk.Frame(root)
@@ -72,7 +76,6 @@ class Annotator:
         self.tk_img = None
         self.tk_img_with_gate = None
 
-
         # Buttons
         btn_frame = tk.Frame(root)
         btn_frame.pack()
@@ -81,10 +84,10 @@ class Annotator:
         tk.Button(btn_frame, text="Save", command=self.save).pack(side="left")
         tk.Button(btn_frame, text="Clear All", command=self.clear_all).pack(side="left")
 
-
         # Build image_paths for the first year
         self.image_paths = self.build_image_paths(self.selected_year.get())
         self.load_image()
+        self.update_progress()  # Show initial progress
 
     def build_image_paths(self, selected_year):
         years = [selected_year] if selected_year else self.years.copy()
@@ -110,6 +113,7 @@ class Annotator:
         print("Opened image:", path)
         self.tk_img = ImageTk.PhotoImage(img)
         self.canvas_left.config(width=self.tk_img.width(), height=self.tk_img.height())
+        self.canvas_left.delete("all")
         self.canvas_left.create_image(0, 0, anchor="nw", image=self.tk_img)
 
         # with gate image
@@ -118,6 +122,7 @@ class Annotator:
         img_with_gate = img_with_gate.resize((400, 180), Image.Resampling.LANCZOS)
         self.tk_img_with_gate = ImageTk.PhotoImage(img_with_gate)
         self.canvas_right.config(width=self.tk_img_with_gate.width(), height=self.tk_img_with_gate.height())
+        self.canvas_right.delete("all")
         self.canvas_right.create_image(0, 0, anchor="nw", image=self.tk_img_with_gate)
 
         # Draw saved points if exist
@@ -142,6 +147,7 @@ class Annotator:
             json.dump(self.points, f, indent=2)
         self.recently_deleted.clear()  # Clear redo stack on save
         print("Saved annotations!")
+        self.update_progress()
 
     def next_image(self):
         if self.index < len(self.image_paths)-1:
@@ -165,21 +171,23 @@ class Annotator:
             return
 
         image_name = os.path.basename(self.image_paths[self.index])
-        del self.points[image_name]
+        if image_name in self.points:
+            del self.points[image_name]
         self.canvas_left.delete("all")
         self.canvas_right.delete("all")
         self.load_image()
         with open(self.save_file, "w") as f:
             json.dump(self.points, f, indent=2)
         print("Cleared all points for", image_name)
+        self.update_progress()
 
-    
     def delete_last_point(self, event=None):
         filename = os.path.basename(self.image_paths[self.index])
         if filename in self.points and self.points[filename]:
             last_point = self.points[filename].pop()
             self.recently_deleted.append(last_point)
             self.load_image()
+            self.update_progress()
 
     def redo_last_point(self):
         if self.recently_deleted:
@@ -189,6 +197,18 @@ class Annotator:
                 self.points[filename] = []
             self.points[filename].append(last_point)
             self.load_image()
+            self.update_progress()
+
+    def update_progress(self):
+        all_filenames = [os.path.basename(p) for p in self.image_paths]
+        labeled_count = sum(1 for fname in all_filenames if fname in self.points and self.points[fname])
+        total_count = len(all_filenames)
+        self.progress_label.config(text=f"Labeled: {labeled_count} / {total_count}")
+    
+    def resource_path(self, relative_path):
+        if hasattr(sys, 'MEIPASS'):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath("."), relative_path)
 
 
 # Run
