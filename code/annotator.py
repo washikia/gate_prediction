@@ -53,7 +53,7 @@ class Annotator:
         redo_btn = tk.Button(top_frame, image=self.redo_image, command=self.redo_last_point)
         redo_btn.pack(side="right", padx=2)
 
-        # Progress label for x/y labeled images
+        # Progress label for x/y labeled imagesn
         self.progress_label = tk.Label(top_frame, text="")
         self.progress_label.pack(side="left", padx=10)
 
