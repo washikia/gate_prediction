@@ -60,13 +60,29 @@ class Annotator:
         # Canvas
         self.canvas_frame = tk.Frame(root)
         self.canvas_frame.pack(fill="both", expand=True)
-        self.canvas_left = tk.Canvas(self.canvas_frame)
-        self.canvas_left.pack(side="left", fill="both", expand=True)
+
+        self.frame_left = tk.Frame(self.canvas_frame)
+        self.frame_left.pack(side="left", fill="both", expand=True)
+
+        self.label_left = tk.Label(self.frame_left, text="Without Gate")
+        # place label at top and left-align it inside the frame
+        self.label_left.pack(side="top", anchor="w", padx=40, pady=(40, 5))
+
+        self.canvas_left = tk.Canvas(self.frame_left)
+        # put canvas below the label so it doesn't sit beside the label
+        self.canvas_left.pack(side="top", padx=(40, 20), pady=(5, 40), fill="both", expand=True)
         self.canvas_left.bind("<Button-1>", self.on_click)
 
-        self.canvas_right = tk.Canvas(self.canvas_frame)
-        self.canvas_right.pack(side="right", fill="both", expand=True)
-        self.canvas_right.bind("<Button-1>", self.on_click)
+        self.frame_right = tk.Frame(self.canvas_frame)
+        self.frame_right.pack(side="right", fill="both", expand=True)
+
+        self.label_right = tk.Label(self.frame_right, text="With Gate")
+        # left-align the right label within its frame (use a smaller left padding)
+        self.label_right.pack(side="top", anchor="w", padx=20, pady=(40, 5))
+
+        self.canvas_right = tk.Canvas(self.frame_right)
+        self.canvas_right.pack(side="top", padx=(20, 40), pady=(5, 40), fill="both", expand=True)
+        # self.canvas_right.bind("<Button-1>", self.on_click) -> functionality disabled
 
         self.root.bind("<Control-z>", self.delete_last_point)
         self.root.bind("<Control-s>", self.save)
@@ -110,13 +126,14 @@ class Annotator:
         path = self.image_paths[self.index]
         img = Image.open(path)
         img = img.resize((400, 180), Image.Resampling.LANCZOS)
-        print("Opened image:", path)
+        # print("Opened image:", path)
         self.tk_img = ImageTk.PhotoImage(img)
         self.canvas_left.config(width=self.tk_img.width(), height=self.tk_img.height())
         self.canvas_left.delete("all")
         self.canvas_left.create_image(0, 0, anchor="nw", image=self.tk_img)
 
         # with gate image
+        # '''
         path_with_gate = path.replace("without_gate", "with_gate")
         img_with_gate = Image.open(path_with_gate)
         img_with_gate = img_with_gate.resize((400, 180), Image.Resampling.LANCZOS)
@@ -124,13 +141,16 @@ class Annotator:
         self.canvas_right.config(width=self.tk_img_with_gate.width(), height=self.tk_img_with_gate.height())
         self.canvas_right.delete("all")
         self.canvas_right.create_image(0, 0, anchor="nw", image=self.tk_img_with_gate)
+        # '''
 
         # Draw saved points if exist
         filename = os.path.basename(path)
         if filename in self.points:
             for (x, y) in self.points[filename]:
                 self.canvas_left.create_oval(x-3, y-3, x+3, y+3, fill="red")
-                self.canvas_right.create_oval(x-3, y-3, x+3, y+3, fill="red")
+                # self.canvas_right.create_oval(x-3, y-3, x+3, y+3, fill="red")
+    
+    
 
     def on_click(self, event):
         x, y = event.x, event.y
@@ -139,7 +159,7 @@ class Annotator:
             self.points[filename] = []
         self.points[filename].append((x,y))
         self.canvas_left.create_oval(x-3,y-3,x+3,y+3,fill="red")
-        self.canvas_right.create_oval(x-3,y-3,x+3,y+3,fill="red")
+        # self.canvas_right.create_oval(x-3,y-3,x+3,y+3,fill="red")
 
     def save(self, event=None):
         print(self.save_file)
@@ -153,7 +173,7 @@ class Annotator:
         if self.index < len(self.image_paths)-1:
             self.index += 1
             self.canvas_left.delete("all")
-            self.canvas_right.delete("all")
+            # self.canvas_right.delete("all")
             self.recently_deleted.clear()  # Clear redo stack on image change
             self.load_image()
 
@@ -161,7 +181,7 @@ class Annotator:
         if self.index > 0:
             self.index -= 1
             self.canvas_left.delete("all")
-            self.canvas_right.delete("all")
+            # self.canvas_right.delete("all")
             self.recently_deleted.clear()  # Clear redo stack on image change
             self.load_image()
     
@@ -174,7 +194,7 @@ class Annotator:
         if image_name in self.points:
             del self.points[image_name]
         self.canvas_left.delete("all")
-        self.canvas_right.delete("all")
+        # self.canvas_right.delete("all")
         self.load_image()
         with open(self.save_file, "w") as f:
             json.dump(self.points, f, indent=2)
