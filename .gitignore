@@ -1,0 +1,42 @@
+# Python virtual environment
+venv/
+.env/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.so
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Data files (adjust folder name as needed)
+data/
+*.csv
+*.tsv
+*.xlsx
+*.h5
+
+# Logs and outputs
+*.log
+*.out
+
+# Model checkpoints and weights
+*.pth
+*.pt
+*.h5
+*.ckpt
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+
+# a folder that I cannot delete
+GDino/
