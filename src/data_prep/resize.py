@@ -11,8 +11,6 @@ def resize_and_pad(image):
     
     Args:
         image: BGR input image
-        target_size: tuple of (width, height) for final size, default (512, 512)
-        pad_color: tuple of (B, G, R) for padding color, default white
     
     Returns:
         padded: BGR image of size target_size with white padding
@@ -37,26 +35,76 @@ def resize_and_pad(image):
     cropped_bgr = image[y:y + h, x:x + w]
 
     # Step 5: Resize to width 470 (not target_size[0] - padding)
-    target_width = 470  # Fixed width as per requirements
-    aspect_ratio = cropped_bgr.shape[1] / cropped_bgr.shape[0]
-    target_height = int(target_width / aspect_ratio)
-    resized = cv.resize(cropped_bgr, (target_width, target_height))
-
-    # Step 6: Add padding to reach 512x512
-    left_right_pad = 21  # Fixed padding as per requirements
     needed_height = 256
-    top_bottom_pad = (needed_height - target_height) // 2
-    extra_bottom = needed_height - (target_height + (top_bottom_pad * 2))
+    needed_width = 512
 
-    padded = cv.copyMakeBorder(
-        resized,
-        top_bottom_pad,
-        top_bottom_pad + extra_bottom,
-        left_right_pad,
-        left_right_pad,
-        cv.BORDER_CONSTANT,
-        value=(255,255,255)
-    )
+    if h <= 256:
+        target_width = 470  # Fixed width as per requirements
+        aspect_ratio = cropped_bgr.shape[1] / max(1, cropped_bgr.shape[0])
+        target_height = max(1, int(round(target_width / aspect_ratio)))
+
+        # If computed height is larger than canvas, scale both dims to fit vertically
+        if target_height > needed_height:
+            scale = needed_height / float(target_height)
+            target_height = needed_height
+            target_width = max(1, int(round(target_width * scale)))
+
+        resized = cv.resize(cropped_bgr, (target_width, target_height))
+
+        # Step 6: Add padding to reach 256x512 (centered)
+        left_right_total = max(0, needed_width - target_width)
+        left_right_pad = left_right_total // 2
+        extra_right = left_right_total - (left_right_pad * 2)
+
+        top_bottom_total = max(0, needed_height - target_height)
+        top_bottom_pad = top_bottom_total // 2
+        extra_bottom = top_bottom_total - (top_bottom_pad * 2)
+
+        padded = cv.copyMakeBorder(
+            resized,
+            top_bottom_pad,
+            top_bottom_pad + extra_bottom,
+            left_right_pad,
+            left_right_pad + extra_right,
+            cv.BORDER_CONSTANT,
+            value=(255, 255, 255)
+        )
+
+    else:
+        # If height > 256, use a content height smaller than canvas and ensure width fits
+        target_height = 240
+        aspect_ratio = cropped_bgr.shape[1] / max(1, cropped_bgr.shape[0])
+        target_width = max(1, int(round(target_height * aspect_ratio)))
+
+        # If width exceeds canvas, scale down to fit horizontally
+        if target_width > needed_width:
+            scale = needed_width / float(target_width)
+            target_width = needed_width
+            target_height = max(1, int(round(target_height * scale)))
+
+        resized = cv.resize(cropped_bgr, (target_width, target_height))
+
+        # Step 6: Add padding to reach 256x512 (centered)
+        left_right_total = max(0, needed_width - target_width)
+        left_right_pad = left_right_total // 2
+        extra_right = left_right_total - (left_right_pad * 2)
+
+        top_bottom_total = max(0, needed_height - target_height)
+        top_bottom_pad = top_bottom_total // 2
+        extra_bottom = top_bottom_total - (top_bottom_pad * 2)
+
+        padded = cv.copyMakeBorder(
+            resized,
+            top_bottom_pad,
+            top_bottom_pad + extra_bottom,
+            left_right_pad,
+            left_right_pad + extra_right,
+            cv.BORDER_CONSTANT,
+            value=(255, 255, 255)
+        )
+
+
+
 
     # Verify size
     assert padded.shape[:2] == (256, 512), \

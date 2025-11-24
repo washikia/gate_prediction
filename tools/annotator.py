@@ -39,11 +39,11 @@ class Annotator:
         self.year_combo.pack(side="left", padx=5, pady=5)
         self.year_combo.bind("<<ComboboxSelected>>", self.on_year_change)
 
-        self.undo_image = Image.open(self.resource_path("./asset/undo.png"))
+        self.undo_image = Image.open(self.resource_path("D:\\washik_personal\\projects\\gate_prediction\\tools\\asset\\undo.png"))
         self.undo_image = self.undo_image.resize((15, 15), Image.Resampling.LANCZOS)
         self.undo_image = ImageTk.PhotoImage(self.undo_image)
 
-        self.redo_image = Image.open(self.resource_path("./asset/redo.png"))
+        self.redo_image = Image.open(self.resource_path("D:\\washik_personal\\projects\\gate_prediction\\tools\\asset\\redo.png"))
         self.redo_image = self.redo_image.resize((15, 15), Image.Resampling.LANCZOS)
         self.redo_image = ImageTk.PhotoImage(self.redo_image)
 
@@ -109,7 +109,7 @@ class Annotator:
             return
         path = self.image_paths[self.index]
         img = Image.open(path)
-        img = img.resize((400, 180), Image.Resampling.LANCZOS)
+        # img = img.resize((400, 180), Image.Resampling.LANCZOS)
         # print("Opened image:", path)
         self.tk_img = ImageTk.PhotoImage(img)
         self.canvas_left.config(width=self.tk_img.width(), height=self.tk_img.height())
@@ -119,7 +119,7 @@ class Annotator:
         # with gate image
         path_with_gate = path.replace("without_gate", "with_gate")
         img_with_gate = Image.open(path_with_gate)
-        img_with_gate = img_with_gate.resize((400, 180), Image.Resampling.LANCZOS)
+        # img_with_gate = img_with_gate.resize((400, 180), Image.Resampling.LANCZOS)
         self.tk_img_with_gate = ImageTk.PhotoImage(img_with_gate)
         self.canvas_right.config(width=self.tk_img_with_gate.width(), height=self.tk_img_with_gate.height())
         self.canvas_right.delete("all")
