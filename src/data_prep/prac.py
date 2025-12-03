@@ -45,8 +45,9 @@ def mold_background_to_black(img_pil):
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     print(len(contours))
-    print(len(contours[0]))
-    print(type(contours))
+    print(contours[6])
+    print(len(contours[6]))
+    print(type(contours[6]))
 
     # Create empty mask
     mask = np.zeros_like(gray)
@@ -63,6 +64,6 @@ if __name__ == "__main__":
     # gate_loc = get_gate_loc(data_path, image_path)
     # print(gate_loc)
     # plot([(Image.open(image_path), gate_loc)])
-    ip = 'D:\\washik_personal\\projects\\gate_prediction\\data\\toy\\2021\\without_gate\\21M4850D_front.png'
+    ip = 'D:\\washik_personal\\projects\\gate_prediction\\data\\toy\\2021\\without_gate\\21M4870D_front.png'
     pil_img = Image.open(ip)
     mold_background_to_black(pil_img)

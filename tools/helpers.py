@@ -5,14 +5,34 @@ from PIL import Image
 import numpy as np
 
 def get_gate_loc(data_path: str, image_name: str):
-    '''
-    get the base of the image from the image_path
-    the data_path is a json file that contains the gate location for each image
-    the coordinates are saved in dictionary format, return the value of the key that is the base of the image
-    '''
+    """
+    Retrieve gate-location coordinates for a given image from a JSON label file.
+
+    Args:
+        data_path (str): Path to the JSON file containing image labels.
+        image_name (str): Filename used as key in the JSON (e.g. "25M1710D_front.png").
+
+    Returns:
+        list | None: List of [x, y] coordinate pairs if present, otherwise None.
+    """
     with open(data_path, 'r') as f:
         data = json.load(f)
     return data.get(image_name, None)
+
+
+
+def add_label(label_path, image_name, label_value):
+    """Add or update a label entry for an image in the annotations JSON file."""
+    with open(label_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    # 2. Add / update entry
+    data[image_name] = label_value  # e.g. label_value is a list of [x, y] points
+
+    # 3. Save back to file
+    with open(label_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
 
 
 def show_images(img_list, titles=None, figsize=(15, 5)):
