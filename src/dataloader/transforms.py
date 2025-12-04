@@ -8,6 +8,7 @@ from PIL import Image
 
 from torchvision.transforms import v2
 from torchvision import tv_tensors
+import torch
 
 
 
@@ -66,6 +67,11 @@ def mold_background_to_black(img):
     return img
 
 
+class aspect_preserving_Resize(torch.nn.Module):
+    def forward(self, )
+
+
+
 def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, angle: int):
     '''
     Pads, rotates, and resizes image and labels to prevent mold from being cut.
@@ -78,13 +84,13 @@ def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, an
         tuple: (transformed_image, transformed_labels)
     '''
     img_lab_tuple = {
-        "img": image,
+        "img": tv_tensors.Image(image),
         "labels": labels
     }
 
     transforms = v2.Compose([
-        v2.Pad(15, fill=0),
-        v2.RandomRotation(8),
+        v2.Pad([15,29], fill=0),
+        v2.RandomRotation((angle, angle)),
         v2.Resize((256, 512))
     ])
 
@@ -93,8 +99,15 @@ def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, an
     # After transforms, labels may no longer be a KeyPoints subclass.
     # Convert to a plain numpy array, then to a nested Python list for JSON.
     labels_arr = np.asarray(img_lab_tuple["labels"])
+    img_np = np.asarray(img_lab_tuple["img"], dtype=np.uint8)
 
-    return img_lab_tuple["img"], labels_arr.tolist()
+    if img_np.ndim == 3 and img_np.shape[0] == 1:
+        img_np = img_np[0]
+
+    # print("After transforms:", type(img_lab_tuple["img"]), img_lab_tuple["img"].shape)
+    # print("After np.asarray :", img_np.shape)
+
+    return img_np, labels_arr.tolist()
 
 
 
@@ -118,10 +131,10 @@ def generate_transformed_dataset(input_root: str):
         img_path = year / "without_gate"
         for img_name in img_path.glob("*.png"):
             img = cv.imread(str(img_name), cv.IMREAD_GRAYSCALE)
-            img_name = img_name.name    # keep this var: img_name
+            img_name = img_name.name    # keep this var: img_name -> it contains the extension .png
 
             # check if the image has a label
-            label_path = input_root_path.parent / "labels" / "annotations.json"
+            label_path = input_root_path.parent / "labels" / "toy.json"
             label = get_gate_loc(label_path, img_name)
             assert label is not None
 
@@ -132,11 +145,12 @@ def generate_transformed_dataset(input_root: str):
 
             # fixed roation +10 of the image and labels
             labels_kp = tv_tensors.KeyPoints(data=label, canvas_size=(256,512))
-            img_rotated_10, labels_rotated_10 = transform_fixed_rotation(img, labels_kp, 10)
-            save_name = img_name + "_rotated_10.png"
+            img_rotated_8, labels_rotated_8 = transform_fixed_rotation(img, labels_kp, 8)
+            img_name_ = img_name.replace('.png', '')  # remove extension
+            save_name = img_name_ + "_rotated_8.png"
             save_path_ = output_path / save_name
-            cv.imwrite(str(save_path_), img_rotated_10)
-            add_label(label_path, save_name, labels_rotated_10)
+            cv.imwrite(str(save_path_), img_rotated_8)
+            add_label(label_path, save_name, labels_rotated_8)
 
             
         print("passed")
@@ -146,3 +160,4 @@ def generate_transformed_dataset(input_root: str):
 
 if __name__ == "__main__":
     generate_transformed_dataset("D:\\washik_personal\\projects\\gate_prediction\\data\\toy")
+
