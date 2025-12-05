@@ -12,6 +12,144 @@ import torch
 
 
 
+
+
+class aspectratio_preserving_Resize(v2.Transform):
+    '''
+    TorchVision v2-compatible transform that can be passed to v2.Compose
+    It Resizes Image and KeyPoints only, and preserves aspect ratio
+    '''
+
+    def __init__(self):
+        super().__init__()
+        self.final_h, self.final_w = 256, 512
+        self.target_height, self.target_width = None, None
+        self.crop_x, self.crop_y, self.crop_w, self.crop_h, self.left_pad, self.top_pad = None, None, None, None, None, None
+
+    # "In order to support arbitrary inputs ...  override the .transform() method"
+    def transform(self, inpt):
+        # Handle dictionaries (from v2.Compose)
+        if isinstance(inpt, dict):
+            result = inpt.copy()  # Preserve other keys
+            # Transform image first to store crop/pad state
+            if "img" in inpt:
+                result["img"] = self._transform_image(inpt["img"])
+            # Then transform labels using the stored state
+            if "labels" in inpt:
+                result["labels"] = self._transfrom_keypoints(inpt["labels"])
+            return result
+        elif isinstance(inpt, tv_tensors.Image):
+            return self._transform_image(inpt)
+        elif isinstance(inpt, tv_tensors.KeyPoints):
+            return self._transfrom_keypoints(inpt)
+        else:
+            return inpt
+
+    
+    def _transform_image(self, img: tv_tensors.Image):
+        img_np = img.numpy()
+
+        edges = cv.Canny(img_np, 50, 250)
+        contours, _ = cv.findContours(edges, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+
+        if not contours: 
+            y, x, h, w = 0, 0, img_np.shape[0], img_np.shape[1]
+        else:
+            all_points = np.concatenate(contours)
+            x, y, w, h = cv.boundingRect(all_points)
+        
+        cropped = img_np[y:y+h, x:x+w]
+
+        # STORE crop for keypoint transform
+        self.crop_x, self.crop_y = x, y
+        self.crop_w, self.crop_h = w, h
+
+        # Resize logic
+        needed_h, needed_w = self.final_h, self.final_w
+
+        if h <= needed_h:
+            target_w = 470
+            aspect_ratio = w / max(1, h)
+            target_h = max(1, int(round(target_w/aspect_ratio)))
+
+            if target_h > needed_h:
+                scale = needed_h / float(target_h)
+                target_h = needed_h
+                target_w = max(1, int(round(target_w * scale)))
+            
+        else:
+            target_h = 240
+            aspect_ratio = w / max(1, h)
+            target_w = max(1, int(round(target_h * aspect_ratio)))
+
+            if target_w > needed_w:
+                scale = needed_w / float(target_w)
+                target_w = needed_w
+                target_h = max(1, int(round(target_h * scale)))
+        
+        self.target_height, self.target_width = target_h, target_w
+        resized = cv.resize(cropped, (target_w, target_h), interpolation=cv.INTER_NEAREST)
+
+        left_right_total = max(0, needed_w - target_w)
+        left_right_pad = left_right_total // 2
+        extra_right = left_right_total - (left_right_pad * 2)
+
+        top_bottom_total = max(0, needed_h -target_h)
+        top_bottom_pad = top_bottom_total // 2
+        extra_bottom = top_bottom_total - (top_bottom_pad * 2)
+
+        # STORE padding offsets
+        self.left_pad = left_right_pad
+        self.top_pad = top_bottom_pad
+
+        
+        padded = cv.copyMakeBorder(
+            resized,
+            top_bottom_pad,
+            top_bottom_pad + extra_bottom,
+            left_right_pad,
+            left_right_pad + extra_right,
+            cv.BORDER_CONSTANT,
+            value=(0,0,0)
+        )
+
+        # Verify size
+        assert padded.shape[:2] == (256, 512), \
+            f"Expected size {(256, 512)}, got {padded.shape[:2]}"
+        
+        return padded
+
+    
+    def _transform_keypoints(self, keypoints: tv_tensors.KeyPoints):
+        """
+        Keypoints are in the format: [[x, y], [x2, y2], ...]
+        Must apply same crop → resize → pad pipeline as image.
+        """
+
+        # Convert to numpy for easier math
+        kp = np.asarray(keypoints, dtype=np.float32)
+
+        # --- 1) Subtract crop origin ---
+        kp[:, 0] -= self.crop_x
+        kp[:, 1] -= self.crop_y
+
+        # --- 2) Resize scaling ---
+        scale_x = self.target_width  / max(1, self.crop_w)
+        scale_y = self.target_height / max(1, self.crop_h)
+
+        kp[:, 0] *= scale_x
+        kp[:, 1] *= scale_y
+
+        # --- 3) Add padding offsets ---
+        kp[:, 0] += self.left_pad
+        kp[:, 1] += self.top_pad
+
+        # Return as KeyPoints again
+        return tv_tensors.KeyPoints(kp, canvas_size=(256, 512))
+
+
+
+
 def mold_background_to_black(img):
     '''
     Converts the background of an image to black while preserving the mold regions.
@@ -67,10 +205,6 @@ def mold_background_to_black(img):
     return img
 
 
-class aspect_preserving_Resize(torch.nn.Module):
-    def forward(self, )
-
-
 
 def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, angle: int):
     '''
@@ -91,7 +225,7 @@ def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, an
     transforms = v2.Compose([
         v2.Pad([15,29], fill=0),
         v2.RandomRotation((angle, angle)),
-        v2.Resize((256, 512))
+        aspectratio_preserving_Resize()
     ])
 
     img_lab_tuple = transforms(img_lab_tuple)
@@ -151,6 +285,7 @@ def generate_transformed_dataset(input_root: str):
             save_path_ = output_path / save_name
             cv.imwrite(str(save_path_), img_rotated_8)
             add_label(label_path, save_name, labels_rotated_8)
+
 
             
         print("passed")
