@@ -41,11 +41,11 @@ class aspectratio_preserving_Resize(v2.Transform):
         elif isinstance(inpt, tv_tensors.Image):
             return self._transform_image(inpt)
         elif isinstance(inpt, tv_tensors.KeyPoints):
-            return self._transfrom_keypoints(inpt)
+            return self._transform_keypoints(inpt)
         else:
             return inpt
 
-    
+
     def _transform_image(self, img: tv_tensors.Image):
         img_np = img.numpy()
 
