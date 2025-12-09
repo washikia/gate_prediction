@@ -12,6 +12,50 @@ import torch
 
 
 
+class DeterministicZoom(v2.Transform):
+    """
+    Deterministic Zoom In / Zoom Out for tv_tensors.Image & tv_tensors.KeyPoints.
+
+    zoom_factor > 1 → zoom in
+    zoom_factor < 1 → zoom out
+    """
+
+    def __init__(self, zoom_factor: float):
+        super().__init__()
+        self.zoom_factor = zoom_factor
+
+    def transform(self, inpt, params=None):
+        if isinstance(inpt, tv_tensors.Image):
+            return self._zoom_image(inpt)
+        elif isinstance(inpt, tv_tensors.KeyPoints):
+            return self._zoom_keypoints(inpt)
+        return inpt
+
+    def _zoom_image(self, img: tv_tensors.Image):
+        # Call TV's deterministic affine transform
+        return v2.functional.affine(
+            img,
+            angle=0.0,
+            translate=[0, 0],
+            scale=self.zoom_factor,
+            shear=[0.0, 0.0],
+            fill=0,      # black padding for zoom-out
+            center=None,
+        )
+
+    def _zoom_keypoints(self, kp: tv_tensors.Image):
+        return v2.functional.affine(
+            kp,
+            angle=0.0,
+            translate=[0, 0],
+            scale=self.zoom_factor,
+            shear=[0.0, 0.0],
+            fill=None,         # keypoints don't need fill
+            center=None,
+        )
+
+
+
 
 
 class aspectratio_preserving_Resize(v2.Transform):
@@ -28,16 +72,6 @@ class aspectratio_preserving_Resize(v2.Transform):
 
     # "In order to support arbitrary inputs ...  override the .transform() method"
     def transform(self, inpt, params=None):
-        # Handle dictionaries (from v2.Compose)
-        # if isinstance(inpt, dict):
-        #     result = inpt.copy()  # Preserve other keys
-        #     # Transform image first to store crop/pad state
-        #     if "img" in inpt:
-        #         result["img"] = self._transform_image(inpt["img"])
-        #     # Then transform labels using the stored state
-        #     if "labels" in inpt:
-        #         result["labels"] = self._transfrom_keypoints(inpt["labels"])
-        #     return result
         if isinstance(inpt, tv_tensors.Image):
             return self._transform_image(inpt)
         elif isinstance(inpt, tv_tensors.KeyPoints):
@@ -53,6 +87,7 @@ class aspectratio_preserving_Resize(v2.Transform):
             img_np = img_np[0]  # Now shape = (H, W)
 
         edges = cv.Canny(img_np, 50, 250)
+        edges = cv.morphologyEx(edges, cv.MORPH_CLOSE, np.ones((5,5), np.uint8))
         contours, _ = cv.findContours(edges, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
         if not contours: 
@@ -63,7 +98,7 @@ class aspectratio_preserving_Resize(v2.Transform):
         
         cropped = img_np[y:y+h, x:x+w]
 
-        # STORE crop for keypoint transform
+        # STORE crop for k-+-+eypoint transform
         self.crop_x, self.crop_y = x, y
         self.crop_w, self.crop_h = w, h
 
@@ -91,7 +126,7 @@ class aspectratio_preserving_Resize(v2.Transform):
                 target_h = max(1, int(round(target_h * scale)))
         
         self.target_height, self.target_width = target_h, target_w
-        resized = cv.resize(cropped, (target_w, target_h), interpolation=cv.INTER_NEAREST)
+        resized = cv.resize(cropped, (target_w, target_h), interpolation=cv.INTER_CUBIC)
 
         left_right_total = max(0, needed_w - target_w)
         left_right_pad = left_right_total // 2
@@ -152,7 +187,7 @@ class aspectratio_preserving_Resize(v2.Transform):
 
 
 
-def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, angle: int):
+def transform_fixed_rotation(image: tv_tensors.Image, labels: tv_tensors.KeyPoints, angle: int):
     '''
     Pads, rotates, and resizes image and labels to prevent mold from being cut.
     
@@ -164,7 +199,7 @@ def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, an
         tuple: (transformed_image, transformed_labels)
     '''
     img_lab_tuple = {
-        "img": tv_tensors.Image(image),
+        "img": image,
         "labels": labels
     }
 
@@ -173,8 +208,6 @@ def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, an
         v2.RandomRotation((angle, angle)),
         aspectratio_preserving_Resize()
     ])
-
-    img_lab_tuple = transforms(img_lab_tuple)
 
     # After transforms, labels may no longer be a KeyPoints subclass.
     # Convert to a plain numpy array, then to a nested Python list for JSON.
@@ -276,22 +309,94 @@ def generate_transformed_dataset(input_root: str):
             save_path = output_path / img_name
             cv.imwrite(str(save_path), img)
 
-            # fixed roation +10 of the image and labels
             labels_kp = tv_tensors.KeyPoints(data=label, canvas_size=(256,512))
-            img_rotated_8, labels_rotated_8 = transform_fixed_rotation(img, labels_kp, 8)
             img_name_ = img_name.replace('.png', '')  # remove extension
-            save_name = img_name_ + "_rotated_8.png"
+
+            # fixed roation +8 of the image and labels
+            img_rotated_p8, labels_rotated_p8 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, 8)
+            save_name = img_name_ + "_rotated_p8.png"
             save_path_ = output_path / save_name
             # Convert tv_tensors.Image to numpy array for cv.imwrite
-            img_np = np.asarray(img_rotated_8, dtype=np.uint8)
+            img_np = np.asarray(img_rotated_p8, dtype=np.uint8)
             if img_np.ndim == 3 and img_np.shape[0] == 1:
                 img_np = img_np[0]  # Remove channel dimension for grayscale
             cv.imwrite(str(save_path_), img_np)
             # Convert tv_tensors.KeyPoints to list for add_label
-            labels_list = np.asarray(labels_rotated_8).tolist()
+            labels_list = np.asarray(labels_rotated_p8).tolist()
+            add_label(label_path, save_name, labels_list)
+
+            # fixed roation -8 of the image and labels
+            img_rotated_n8, labels_rotated_n8 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, -8)
+            save_name = img_name_ + "_rotated_n8.png"
+            save_path_ = output_path / save_name
+            # Convert tv_tensors.Image to numpy array for cv.imwrite
+            img_np = np.asarray(img_rotated_n8, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]  # Remove channel dimension for grayscale
+            cv.imwrite(str(save_path_), img_np)
+            # Convert tv_tensors.KeyPoints to list for add_label
+            labels_list = np.asarray(labels_rotated_n8).tolist()
             add_label(label_path, save_name, labels_list)
 
 
+            # fixed rotation +17 of the image and labels
+            img_rotated_p17, labels_rotated_p17 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, 17)
+            save_name = img_name_ + "_rotated_p17.png"
+            save_path_ = output_path / save_name
+
+            # Convert tv_tensors.Image to numpy array for cv.imwrite
+            img_np = np.asarray(img_rotated_p17, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]  # Remove channel dimension for grayscale
+            cv.imwrite(str(save_path_), img_np)
+
+            # Convert tv_tensors.KeyPoints to list for add_label
+            labels_list = np.asarray(labels_rotated_p17).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # fixed rotation -17 of the image and labels
+            img_rotated_n17, labels_rotated_n17 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, -17)
+            save_name = img_name_ + "_rotated_n17.png"
+            save_path_ = output_path / save_name
+
+            # Convert tv_tensors.Image to numpy array for cv.imwrite
+            img_np = np.asarray(img_rotated_n17, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]  # Remove channel dimension for grayscale
+            cv.imwrite(str(save_path_), img_np)
+
+            # Convert tv_tensors.KeyPoints to list for add_label
+            labels_list = np.asarray(labels_rotated_n17).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+
+            # fixed zoom-in on original grayscale
+            zoomin5 = DeterministicZoom(1.05)
+            zoomedin5 = zoomin5({"img": tv_tensors.Image(img), "labels":labels_kp})
+            img_np = np.asarray(zoomedin5["img"], dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0]==1:
+                img_np = img_np[0]
+            
+            save_name = img_name_ + "_zoomedin_5p.png"
+            save_path = output_path / save_name
+            cv.imwrite(str(save_path), img_np)
+            labels_list = np.asarray(zoomedin5["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+            # fixed zoom out on original grayscale
+            zoomout10 = DeterministicZoom(0.9)
+            zoomedout10 = zoomout10({"img": tv_tensors.Image(img), "labels":labels_kp})
+            img_np = np.asarray(zoomedout10["img"], dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0]==1:
+                img_np = img_np[0]
+            
+            save_name = img_name_ + "_zoomedout_10p.png"
+            save_path = output_path / save_name
+            cv.imwrite(str(save_path), img_np)
+            labels_list = np.asarray(zoomedout10["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
             
         print("passed")
 
