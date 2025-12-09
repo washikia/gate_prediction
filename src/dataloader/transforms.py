@@ -27,18 +27,18 @@ class aspectratio_preserving_Resize(v2.Transform):
         self.crop_x, self.crop_y, self.crop_w, self.crop_h, self.left_pad, self.top_pad = None, None, None, None, None, None
 
     # "In order to support arbitrary inputs ...  override the .transform() method"
-    def transform(self, inpt):
+    def transform(self, inpt, params=None):
         # Handle dictionaries (from v2.Compose)
-        if isinstance(inpt, dict):
-            result = inpt.copy()  # Preserve other keys
-            # Transform image first to store crop/pad state
-            if "img" in inpt:
-                result["img"] = self._transform_image(inpt["img"])
-            # Then transform labels using the stored state
-            if "labels" in inpt:
-                result["labels"] = self._transfrom_keypoints(inpt["labels"])
-            return result
-        elif isinstance(inpt, tv_tensors.Image):
+        # if isinstance(inpt, dict):
+        #     result = inpt.copy()  # Preserve other keys
+        #     # Transform image first to store crop/pad state
+        #     if "img" in inpt:
+        #         result["img"] = self._transform_image(inpt["img"])
+        #     # Then transform labels using the stored state
+        #     if "labels" in inpt:
+        #         result["labels"] = self._transfrom_keypoints(inpt["labels"])
+        #     return result
+        if isinstance(inpt, tv_tensors.Image):
             return self._transform_image(inpt)
         elif isinstance(inpt, tv_tensors.KeyPoints):
             return self._transform_keypoints(inpt)
@@ -48,6 +48,9 @@ class aspectratio_preserving_Resize(v2.Transform):
 
     def _transform_image(self, img: tv_tensors.Image):
         img_np = img.numpy()
+
+        if img_np.ndim == 3 and img_np.shape[0] == 1:
+            img_np = img_np[0]  # Now shape = (H, W)
 
         edges = cv.Canny(img_np, 50, 250)
         contours, _ = cv.findContours(edges, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
@@ -114,10 +117,9 @@ class aspectratio_preserving_Resize(v2.Transform):
         )
 
         # Verify size
-        assert padded.shape[:2] == (256, 512), \
-            f"Expected size {(256, 512)}, got {padded.shape[:2]}"
-        
-        return padded
+        padded_tensor = torch.from_numpy(padded).unsqueeze(0)  # C, H, W
+
+        return tv_tensors.Image(padded_tensor)
 
     
     def _transform_keypoints(self, keypoints: tv_tensors.KeyPoints):
@@ -147,6 +149,42 @@ class aspectratio_preserving_Resize(v2.Transform):
         # Return as KeyPoints again
         return tv_tensors.KeyPoints(kp, canvas_size=(256, 512))
 
+
+
+
+def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, angle: int):
+    '''
+    Pads, rotates, and resizes image and labels to prevent mold from being cut.
+    
+    Args:
+        image: Input grayscale image (numpy.ndarray)
+        labels: KeyPoints tensor with gate coordinates
+    
+    Returns:
+        tuple: (transformed_image, transformed_labels)
+    '''
+    img_lab_tuple = {
+        "img": tv_tensors.Image(image),
+        "labels": labels
+    }
+
+    transforms = v2.Compose([
+        v2.Pad([15,29], fill=0),
+        v2.RandomRotation((angle, angle)),
+        aspectratio_preserving_Resize()
+    ])
+
+    img_lab_tuple = transforms(img_lab_tuple)
+
+    # After transforms, labels may no longer be a KeyPoints subclass.
+    # Convert to a plain numpy array, then to a nested Python list for JSON.
+    img_lab_tuple = transforms(img_lab_tuple)
+
+    # Ensure the results are tv_tensors.Image and tv_tensors.KeyPoints
+    transformed_img = img_lab_tuple["img"]
+    transformed_labels = img_lab_tuple["labels"]
+    
+    return transformed_img, transformed_labels
 
 
 
@@ -206,45 +244,6 @@ def mold_background_to_black(img):
 
 
 
-def transform_fixed_rotation(image: np.ndarray, labels: tv_tensors.KeyPoints, angle: int):
-    '''
-    Pads, rotates, and resizes image and labels to prevent mold from being cut.
-    
-    Args:
-        image: Input grayscale image (numpy.ndarray)
-        labels: KeyPoints tensor with gate coordinates
-    
-    Returns:
-        tuple: (transformed_image, transformed_labels)
-    '''
-    img_lab_tuple = {
-        "img": tv_tensors.Image(image),
-        "labels": labels
-    }
-
-    transforms = v2.Compose([
-        v2.Pad([15,29], fill=0),
-        v2.RandomRotation((angle, angle)),
-        aspectratio_preserving_Resize()
-    ])
-
-    img_lab_tuple = transforms(img_lab_tuple)
-
-    # After transforms, labels may no longer be a KeyPoints subclass.
-    # Convert to a plain numpy array, then to a nested Python list for JSON.
-    labels_arr = np.asarray(img_lab_tuple["labels"])
-    img_np = np.asarray(img_lab_tuple["img"], dtype=np.uint8)
-
-    if img_np.ndim == 3 and img_np.shape[0] == 1:
-        img_np = img_np[0]
-
-    # print("After transforms:", type(img_lab_tuple["img"]), img_lab_tuple["img"].shape)
-    # print("After np.asarray :", img_np.shape)
-
-    return img_np, labels_arr.tolist()
-
-
-
 
 def generate_transformed_dataset(input_root: str):
     '''
@@ -283,8 +282,14 @@ def generate_transformed_dataset(input_root: str):
             img_name_ = img_name.replace('.png', '')  # remove extension
             save_name = img_name_ + "_rotated_8.png"
             save_path_ = output_path / save_name
-            cv.imwrite(str(save_path_), img_rotated_8)
-            add_label(label_path, save_name, labels_rotated_8)
+            # Convert tv_tensors.Image to numpy array for cv.imwrite
+            img_np = np.asarray(img_rotated_8, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]  # Remove channel dimension for grayscale
+            cv.imwrite(str(save_path_), img_np)
+            # Convert tv_tensors.KeyPoints to list for add_label
+            labels_list = np.asarray(labels_rotated_8).tolist()
+            add_label(label_path, save_name, labels_list)
 
 
             
