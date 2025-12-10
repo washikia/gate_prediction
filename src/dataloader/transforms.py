@@ -12,6 +12,24 @@ import torch
 
 
 
+class DeterministicFlip(v2.Transform):
+    def __init__(self, direction="horizontal"):
+        super().__init__()
+        assert direction in ("horizontal", "vertical")
+        self.direction = direction
+
+    def transform(self, inpt, params):
+        # Case 1: Image
+        if isinstance(inpt, tv_tensors.Image) or isinstance(inpt, tv_tensors.KeyPoints):
+            if self.direction == "horizontal":
+                return v2.functional.horizontal_flip(inpt)
+            else:
+                return v2.functional.vertical_flip(inpt)
+
+        return inpt
+
+
+
 class DeterministicZoom(v2.Transform):
     """
     Deterministic Zoom In / Zoom Out for tv_tensors.Image & tv_tensors.KeyPoints.
@@ -349,10 +367,13 @@ def generate_transformed_dataset(input_root: str):
             add_label(label_path, save_name, labels_list)
 
 
-            # 6. fixed zoom-in 5% on original grayscale
+            # Pre-create zoom transformers once (reuse)
             zoomin5 = DeterministicZoom(1.05)
-            zoomedin5 = zoomin5({"img": tv_tensors.Image(img), "labels":labels_kp})
-            save_name = img_name_ + "_zoomedin_5p.png"
+            zoomout10 = DeterministicZoom(0.9)
+
+            # 6. fixed zoom-in 5% on original grayscale
+            zoomedin5 = zoomin5({"img": tv_tensors.Image(img), "labels": labels_kp})
+            save_name = img_name_ + "_zoomed_in_5p.png"
             save_path = output_path / save_name
             save_tv_image(zoomedin5["img"], save_path)
             labels_list = np.asarray(zoomedin5["labels"]).tolist()
@@ -360,9 +381,8 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 7. fixed zoom out 10% on original grayscale
-            zoomout10 = DeterministicZoom(0.9)
-            zoomedout10 = zoomout10({"img": tv_tensors.Image(img), "labels":labels_kp})
-            save_name = img_name_ + "_zoomedout_10p.png"
+            zoomedout10 = zoomout10({"img": tv_tensors.Image(img), "labels": labels_kp})
+            save_name = img_name_ + "_zoomed_out_10p.png"
             save_path = output_path / save_name
             save_tv_image(zoomedout10["img"], save_path)
             labels_list = np.asarray(zoomedout10["labels"]).tolist()
@@ -370,14 +390,8 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 8. fixed zoom in 5% on (2) 8 degree anticlockwise rotation
-            img_np = np.asarray(img_rotated_p8, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]
-            labels_list = np.asarray(labels_rotated_p8).tolist()
-            
-            zoomin5rotatedp8 = DeterministicZoom(1.05)
-            zoomedin5rotatedp8 = zoomin5rotatedp8({"img": img_np, "labels": labels_list})
-            save_name = img_name_ + "_zoomedinrotatedp8_5p.png"
+            zoomedin5rotatedp8 = zoomin5({"img": img_rotated_p8, "labels": labels_rotated_p8})
+            save_name = img_name_ + "_zoomed_in_rotated_p8_5p.png"
             save_path = output_path / save_name
             save_tv_image(zoomedin5rotatedp8["img"], save_path)
             labels_list = np.asarray(zoomedin5rotatedp8["labels"]).tolist()
@@ -385,14 +399,8 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 9. fixed zoom out 10% on (2) 8 degree anticlockwise rotation
-            img_np = np.asarray(img_rotated_p8, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]
-            labels_list = np.asarray(labels_rotated_p8).tolist()
-            
-            zoomout10rotatedp8 = DeterministicZoom(0.9)
-            zoomedout10rotatedp8 = zoomout10rotatedp8({"img": img_np, "labels": labels_list})
-            save_name = img_name_ + "_zoomedoutrotatedp8_10p.png"
+            zoomedout10rotatedp8 = zoomout10({"img": img_rotated_p8, "labels": labels_rotated_p8})
+            save_name = img_name_ + "_zoomed_out_rotated_p8_10p.png"
             save_path = output_path / save_name
             save_tv_image(zoomedout10rotatedp8["img"], save_path)
             labels_list = np.asarray(zoomedout10rotatedp8["labels"]).tolist()
@@ -400,14 +408,8 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 10. fixed zoom in 5% on (3) 8 degree clockwise rotation
-            img_np = np.asarray(img_rotated_n8, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]
-            labels_list = np.asarray(labels_rotated_n8).tolist()
-            
-            zoomin5rotatedn8 = DeterministicZoom(1.05)
-            zoomedin5rotatedn8 = zoomin5rotatedn8({"img": img_np, "labels": labels_list})
-            save_name = img_name_ + "_zoomedinrotatedn8_5p.png"
+            zoomedin5rotatedn8 = zoomin5({"img": img_rotated_n8, "labels": labels_rotated_n8})
+            save_name = img_name_ + "_zoomed_in_rotated_n8_5p.png"
             save_path = output_path / save_name
             save_tv_image(zoomedin5rotatedn8["img"], save_path)
             labels_list = np.asarray(zoomedin5rotatedn8["labels"]).tolist()
@@ -415,14 +417,8 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 11. fixed zoom out 10% on (3) 8 degree clockwise rotation
-            img_np = np.asarray(img_rotated_n8, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]
-            labels_list = np.asarray(labels_rotated_n8).tolist()
-            
-            zoomout10rotatedn8 = DeterministicZoom(0.9)
-            zoomedout10rotatedn8 = zoomout10rotatedn8({"img": img_np, "labels": labels_list})
-            save_name = img_name_ + "_zoomedoutrotatedn8_10p.png"
+            zoomedout10rotatedn8 = zoomout10({"img": img_rotated_n8, "labels": labels_rotated_n8})
+            save_name = img_name_ + "_zoomed_out_rotated_n8_10p.png"
             save_path = output_path / save_name
             save_tv_image(zoomedout10rotatedn8["img"], save_path)
             labels_list = np.asarray(zoomedout10rotatedn8["labels"]).tolist()
@@ -430,13 +426,7 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 12. fixed zoom in 5% on (4) 17 degree anticlockwise rotation
-            img_np = np.asarray(img_rotated_p17, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]
-            labels_list = np.asarray(labels_rotated_p17).tolist()
-            
-            zoom_in_5_rotated_p17 = DeterministicZoom(1.05)
-            zoomed_in_5_rotated_p17 = zoom_in_5_rotated_p17({"img": img_np, "labels": labels_list})
+            zoomed_in_5_rotated_p17 = zoomin5({"img": img_rotated_p17, "labels": labels_rotated_p17})
             save_name = img_name_ + "_zoomed_in_rotated_p17_5p.png"
             save_path = output_path / save_name
             save_tv_image(zoomed_in_5_rotated_p17["img"], save_path)
@@ -445,13 +435,7 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 13. fixed zoom out 10% on (4) 17 degree anticlockwise rotation
-            img_np = np.asarray(img_rotated_p17, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]
-            labels_list = np.asarray(labels_rotated_p17).tolist()
-            
-            zoom_out_10_rotated_p17 = DeterministicZoom(0.9)
-            zoomed_out_10_rotated_p17 = zoom_out_10_rotated_p17({"img": img_np, "labels": labels_list})
+            zoomed_out_10_rotated_p17 = zoomout10({"img": img_rotated_p17, "labels": labels_rotated_p17})
             save_name = img_name_ + "_zoomed_out_rotated_p17_10p.png"
             save_path = output_path / save_name
             save_tv_image(zoomed_out_10_rotated_p17["img"], save_path)
@@ -460,13 +444,7 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 14. fixed zoom in 5% on (5) 17 degree clockwise rotation
-            img_np = np.asarray(img_rotated_n17, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]
-            labels_list = np.asarray(labels_rotated_n17).tolist()
-            
-            zoom_in_5_rotated_n17 = DeterministicZoom(1.05)
-            zoomed_in_5_rotated_n17 = zoom_in_5_rotated_n17({"img": img_np, "labels": labels_list})
+            zoomed_in_5_rotated_n17 = zoomin5({"img": img_rotated_n17, "labels": labels_rotated_n17})
             save_name = img_name_ + "_zoomed_in_rotated_n17_5p.png"
             save_path = output_path / save_name
             save_tv_image(zoomed_in_5_rotated_n17["img"], save_path)
@@ -475,13 +453,7 @@ def generate_transformed_dataset(input_root: str):
 
 
             # 15. fixed zoom out 10% on (5) 17 degree clockwise rotation
-            img_np = np.asarray(img_rotated_n17, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]
-            labels_list = np.asarray(labels_rotated_n17).tolist()
-            
-            zoom_out_10_rotated_n17 = DeterministicZoom(0.9)
-            zoomed_out_10_rotated_n17 = zoom_out_10_rotated_n17({"img": img_np, "labels": labels_list})
+            zoomed_out_10_rotated_n17 = zoomout10({"img": img_rotated_n17, "labels": labels_rotated_n17})
             save_name = img_name_ + "_zoomed_out_rotated_n17_10p.png"
             save_path = output_path / save_name
             save_tv_image(zoomed_out_10_rotated_n17["img"], save_path)
@@ -490,8 +462,6 @@ def generate_transformed_dataset(input_root: str):
 
 
 
-
-            
         print("passed")
 
 
