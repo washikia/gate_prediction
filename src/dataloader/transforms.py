@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import glob
 import cv2 as cv
-from tools.helpers import get_gate_loc, add_label
+from tools.helpers import get_gate_loc, add_label, save_tv_image
 import numpy as np
 from PIL import Image
 
@@ -43,7 +43,7 @@ class DeterministicZoom(v2.Transform):
             center=None,
         )
 
-    def _zoom_keypoints(self, kp: tv_tensors.Image):
+    def _zoom_keypoints(self, kp: tv_tensors.KeyPoints):
         return v2.functional.affine(
             kp,
             angle=0.0,
@@ -213,7 +213,6 @@ def transform_fixed_rotation(image: tv_tensors.Image, labels: tv_tensors.KeyPoin
     # Convert to a plain numpy array, then to a nested Python list for JSON.
     img_lab_tuple = transforms(img_lab_tuple)
 
-    # Ensure the results are tv_tensors.Image and tv_tensors.KeyPoints
     transformed_img = img_lab_tuple["img"]
     transformed_labels = img_lab_tuple["labels"]
     
@@ -304,7 +303,8 @@ def generate_transformed_dataset(input_root: str):
             label = get_gate_loc(label_path, img_name)
             assert label is not None
 
-            # save the grayscale image with same name without year
+
+            # 1. save the grayscale image with same name without year
             img = mold_background_to_black(img)  # keep this var: img -> get other transforms from this
             save_path = output_path / img_name
             cv.imwrite(str(save_path), img)
@@ -312,91 +312,185 @@ def generate_transformed_dataset(input_root: str):
             labels_kp = tv_tensors.KeyPoints(data=label, canvas_size=(256,512))
             img_name_ = img_name.replace('.png', '')  # remove extension
 
-            # fixed roation +8 of the image and labels
+
+            # 2. fixed roation +8 of the image and labels
             img_rotated_p8, labels_rotated_p8 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, 8)
             save_name = img_name_ + "_rotated_p8.png"
             save_path_ = output_path / save_name
-            # Convert tv_tensors.Image to numpy array for cv.imwrite
-            img_np = np.asarray(img_rotated_p8, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]  # Remove channel dimension for grayscale
-            cv.imwrite(str(save_path_), img_np)
-            # Convert tv_tensors.KeyPoints to list for add_label
+            save_tv_image(img_rotated_p8, save_path_)
             labels_list = np.asarray(labels_rotated_p8).tolist()
             add_label(label_path, save_name, labels_list)
 
-            # fixed roation -8 of the image and labels
+
+            # 3. fixed roation -8 of the image and labels
             img_rotated_n8, labels_rotated_n8 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, -8)
             save_name = img_name_ + "_rotated_n8.png"
             save_path_ = output_path / save_name
-            # Convert tv_tensors.Image to numpy array for cv.imwrite
-            img_np = np.asarray(img_rotated_n8, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]  # Remove channel dimension for grayscale
-            cv.imwrite(str(save_path_), img_np)
-            # Convert tv_tensors.KeyPoints to list for add_label
+            save_tv_image(img_rotated_n8, save_path_)
             labels_list = np.asarray(labels_rotated_n8).tolist()
             add_label(label_path, save_name, labels_list)
 
 
-            # fixed rotation +17 of the image and labels
+            # 4. fixed rotation +17 of the image and labels
             img_rotated_p17, labels_rotated_p17 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, 17)
             save_name = img_name_ + "_rotated_p17.png"
             save_path_ = output_path / save_name
-
-            # Convert tv_tensors.Image to numpy array for cv.imwrite
-            img_np = np.asarray(img_rotated_p17, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]  # Remove channel dimension for grayscale
-            cv.imwrite(str(save_path_), img_np)
-
-            # Convert tv_tensors.KeyPoints to list for add_label
+            save_tv_image(img_rotated_p17, save_path_)
             labels_list = np.asarray(labels_rotated_p17).tolist()
             add_label(label_path, save_name, labels_list)
 
 
-            # fixed rotation -17 of the image and labels
+            # 5. fixed rotation -17 of the image and labels
             img_rotated_n17, labels_rotated_n17 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, -17)
             save_name = img_name_ + "_rotated_n17.png"
             save_path_ = output_path / save_name
-
-            # Convert tv_tensors.Image to numpy array for cv.imwrite
-            img_np = np.asarray(img_rotated_n17, dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0] == 1:
-                img_np = img_np[0]  # Remove channel dimension for grayscale
-            cv.imwrite(str(save_path_), img_np)
-
-            # Convert tv_tensors.KeyPoints to list for add_label
+            save_tv_image(img_rotated_n17, save_path_)
             labels_list = np.asarray(labels_rotated_n17).tolist()
             add_label(label_path, save_name, labels_list)
 
 
-
-            # fixed zoom-in on original grayscale
+            # 6. fixed zoom-in 5% on original grayscale
             zoomin5 = DeterministicZoom(1.05)
             zoomedin5 = zoomin5({"img": tv_tensors.Image(img), "labels":labels_kp})
-            img_np = np.asarray(zoomedin5["img"], dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0]==1:
-                img_np = img_np[0]
-            
             save_name = img_name_ + "_zoomedin_5p.png"
             save_path = output_path / save_name
-            cv.imwrite(str(save_path), img_np)
+            save_tv_image(zoomedin5["img"], save_path)
             labels_list = np.asarray(zoomedin5["labels"]).tolist()
             add_label(label_path, save_name, labels_list)
 
-            # fixed zoom out on original grayscale
+
+            # 7. fixed zoom out 10% on original grayscale
             zoomout10 = DeterministicZoom(0.9)
             zoomedout10 = zoomout10({"img": tv_tensors.Image(img), "labels":labels_kp})
-            img_np = np.asarray(zoomedout10["img"], dtype=np.uint8)
-            if img_np.ndim == 3 and img_np.shape[0]==1:
-                img_np = img_np[0]
-            
             save_name = img_name_ + "_zoomedout_10p.png"
             save_path = output_path / save_name
-            cv.imwrite(str(save_path), img_np)
+            save_tv_image(zoomedout10["img"], save_path)
             labels_list = np.asarray(zoomedout10["labels"]).tolist()
             add_label(label_path, save_name, labels_list)
+
+
+            # 8. fixed zoom in 5% on (2) 8 degree anticlockwise rotation
+            img_np = np.asarray(img_rotated_p8, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]
+            labels_list = np.asarray(labels_rotated_p8).tolist()
+            
+            zoomin5rotatedp8 = DeterministicZoom(1.05)
+            zoomedin5rotatedp8 = zoomin5rotatedp8({"img": img_np, "labels": labels_list})
+            save_name = img_name_ + "_zoomedinrotatedp8_5p.png"
+            save_path = output_path / save_name
+            save_tv_image(zoomedin5rotatedp8["img"], save_path)
+            labels_list = np.asarray(zoomedin5rotatedp8["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 9. fixed zoom out 10% on (2) 8 degree anticlockwise rotation
+            img_np = np.asarray(img_rotated_p8, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]
+            labels_list = np.asarray(labels_rotated_p8).tolist()
+            
+            zoomout10rotatedp8 = DeterministicZoom(0.9)
+            zoomedout10rotatedp8 = zoomout10rotatedp8({"img": img_np, "labels": labels_list})
+            save_name = img_name_ + "_zoomedoutrotatedp8_10p.png"
+            save_path = output_path / save_name
+            save_tv_image(zoomedout10rotatedp8["img"], save_path)
+            labels_list = np.asarray(zoomedout10rotatedp8["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 10. fixed zoom in 5% on (3) 8 degree clockwise rotation
+            img_np = np.asarray(img_rotated_n8, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]
+            labels_list = np.asarray(labels_rotated_n8).tolist()
+            
+            zoomin5rotatedn8 = DeterministicZoom(1.05)
+            zoomedin5rotatedn8 = zoomin5rotatedn8({"img": img_np, "labels": labels_list})
+            save_name = img_name_ + "_zoomedinrotatedn8_5p.png"
+            save_path = output_path / save_name
+            save_tv_image(zoomedin5rotatedn8["img"], save_path)
+            labels_list = np.asarray(zoomedin5rotatedn8["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 11. fixed zoom out 10% on (3) 8 degree clockwise rotation
+            img_np = np.asarray(img_rotated_n8, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]
+            labels_list = np.asarray(labels_rotated_n8).tolist()
+            
+            zoomout10rotatedn8 = DeterministicZoom(0.9)
+            zoomedout10rotatedn8 = zoomout10rotatedn8({"img": img_np, "labels": labels_list})
+            save_name = img_name_ + "_zoomedoutrotatedn8_10p.png"
+            save_path = output_path / save_name
+            save_tv_image(zoomedout10rotatedn8["img"], save_path)
+            labels_list = np.asarray(zoomedout10rotatedn8["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 12. fixed zoom in 5% on (4) 17 degree anticlockwise rotation
+            img_np = np.asarray(img_rotated_p17, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]
+            labels_list = np.asarray(labels_rotated_p17).tolist()
+            
+            zoom_in_5_rotated_p17 = DeterministicZoom(1.05)
+            zoomed_in_5_rotated_p17 = zoom_in_5_rotated_p17({"img": img_np, "labels": labels_list})
+            save_name = img_name_ + "_zoomed_in_rotated_p17_5p.png"
+            save_path = output_path / save_name
+            save_tv_image(zoomed_in_5_rotated_p17["img"], save_path)
+            labels_list = np.asarray(zoomed_in_5_rotated_p17["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 13. fixed zoom out 10% on (4) 17 degree anticlockwise rotation
+            img_np = np.asarray(img_rotated_p17, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]
+            labels_list = np.asarray(labels_rotated_p17).tolist()
+            
+            zoom_out_10_rotated_p17 = DeterministicZoom(0.9)
+            zoomed_out_10_rotated_p17 = zoom_out_10_rotated_p17({"img": img_np, "labels": labels_list})
+            save_name = img_name_ + "_zoomed_out_rotated_p17_10p.png"
+            save_path = output_path / save_name
+            save_tv_image(zoomed_out_10_rotated_p17["img"], save_path)
+            labels_list = np.asarray(zoomed_out_10_rotated_p17["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 14. fixed zoom in 5% on (5) 17 degree clockwise rotation
+            img_np = np.asarray(img_rotated_n17, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]
+            labels_list = np.asarray(labels_rotated_n17).tolist()
+            
+            zoom_in_5_rotated_n17 = DeterministicZoom(1.05)
+            zoomed_in_5_rotated_n17 = zoom_in_5_rotated_n17({"img": img_np, "labels": labels_list})
+            save_name = img_name_ + "_zoomed_in_rotated_n17_5p.png"
+            save_path = output_path / save_name
+            save_tv_image(zoomed_in_5_rotated_n17["img"], save_path)
+            labels_list = np.asarray(zoomed_in_5_rotated_n17["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 15. fixed zoom out 10% on (5) 17 degree clockwise rotation
+            img_np = np.asarray(img_rotated_n17, dtype=np.uint8)
+            if img_np.ndim == 3 and img_np.shape[0] == 1:
+                img_np = img_np[0]
+            labels_list = np.asarray(labels_rotated_n17).tolist()
+            
+            zoom_out_10_rotated_n17 = DeterministicZoom(0.9)
+            zoomed_out_10_rotated_n17 = zoom_out_10_rotated_n17({"img": img_np, "labels": labels_list})
+            save_name = img_name_ + "_zoomed_out_rotated_n17_10p.png"
+            save_path = output_path / save_name
+            save_tv_image(zoomed_out_10_rotated_n17["img"], save_path)
+            labels_list = np.asarray(zoomed_out_10_rotated_n17["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+
+
             
         print("passed")
 

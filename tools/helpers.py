@@ -3,6 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
+import cv2 as cv
 
 def get_gate_loc(data_path: str, image_name: str):
     """
@@ -32,6 +33,18 @@ def add_label(label_path, image_name, label_value):
     # 3. Save back to file
     with open(label_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
+
+
+
+def save_tv_image(img_tensor, path):
+    # Convert to numpy
+    img_np = np.asarray(img_tensor, dtype=np.uint8)
+
+    # For grayscale images stored as (1, H, W)
+    if img_np.ndim == 3 and img_np.shape[0] == 1:
+        img_np = img_np[0]
+
+    cv.imwrite(str(path), img_np)
 
 
 
