@@ -460,6 +460,94 @@ def generate_transformed_dataset(input_root: str):
             labels_list = np.asarray(zoomed_out_10_rotated_n17["labels"]).tolist()
             add_label(label_path, save_name, labels_list)
 
+            
+            horizontal_flip = DeterministicFlip(direction="horizontal")
+            vertical_flip = DeterministicFlip(direction="vertical")
+
+            # 16. fixed horizontal flip on (1) the original gray scale
+            horizontally_flipped = horizontal_flip({"img": tv_tensors.Image(img), "labels": labels_kp})
+            save_name = img_name_ + "_horizontal_flip.png"
+            save_path = output_path / save_name
+            save_tv_image(horizontally_flipped["img"], save_path)
+            labels_list = np.asarray(horizontally_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+            # 17. fixed vertical flip on (2) the original gray scale
+            vertically_flipped = vertical_flip({"img": tv_tensors.Image(img), "labels": labels_kp})
+            save_name = img_name_ + "_vertical_flip.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+            # 18. fixed vertical flip on (2) rotated 8 degree anticlockwise
+            vertically_flipped = vertical_flip({"img": img_rotated_p8, "labels": labels_rotated_p8})
+            save_name = img_name_ + "_vertical_flip_rotate_p8.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+            # 19. fixed vertical flip on (3) rotated 8 degree clockwise
+            vertically_flipped = vertical_flip({"img": tv_tensors.Image(img_rotated_n8), "labels": labels_rotated_n8})
+            save_name = img_name_ + "_vertical_flip_rotate_n8.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 20. fixed vertical flip on (4) rotated anticlockwise 17
+            vertically_flipped = vertical_flip({"img": img_rotated_p17, "labels": labels_rotated_p17})
+            save_name = img_name_ + "_vertical_flip_rotate_p17.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 21. fixed vertical flip on (5) rotated clockwise 17
+            vertically_flipped = vertical_flip({"img": img_rotated_n17, "labels": labels_rotated_n17})
+            save_name = img_name_ + "_vertical_flip_rotate_n17.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+            
+
+            # 22. fixed vertical flip on (14) rotated 17 degree clockwise and zoomed in 5% 
+            vertically_flipped = vertical_flip({"img": zoomed_in_5_rotated_n17["img"], "labels": zoomed_in_5_rotated_n17["labels"]})
+            save_name = img_name_ + "vertical_flip_zoomed_in_rotated_n17_5p.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 23. fixed vertical flip on (15) rotated 17 degree clockwise
+            vertically_flipped = vertical_flip({"img": zoomed_out_10_rotated_n17["img"], "labels": zoomed_out_10_rotated_n17["labels"]})
+            save_name = img_name_ + "vertical_flip_zoomed_out_rotated_n17_10p.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+            # 24. fixed vertical flip on (12) 5% zoom in and 17 degree anticlockwise rotation
+            vertically_flipped = vertical_flip({"img": zoomed_in_5_rotated_p17["img"], "labels": zoomed_in_5_rotated_p17["labels"]})
+            save_name = img_name_ + "vertical_flip_zoomed_in_rotated_p17_5p.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
+
+
+            # 25. fixed vertical flip on (13) 10% zoom out and 17 degree anticlockwise rotation
+            vertically_flipped = vertical_flip({"img":zoomed_out_10_rotated_p17["img"], "labels": zoomed_out_10_rotated_p17["labels"]})
+            save_name = img_name_ + "vertical_flip__zoomed_out_rotated_p17_10p.png"
+            save_path = output_path / save_name
+            save_tv_image(vertically_flipped["img"], save_path)
+            labels_list = np.asarray(vertically_flipped["labels"]).tolist()
+            add_label(label_path, save_name, labels_list)
 
 
         print("passed")
