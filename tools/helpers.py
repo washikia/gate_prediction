@@ -4,6 +4,39 @@ import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
 import cv2 as cv
+from random import choice, choices
+
+
+def transform_point(point: list) -> list:
+    '''
+    Changes the coordiantes by 1 or 2 units in each direction.
+
+    Args:
+        list: of len 2, containing a single coordinate, like [a, b]
+
+    Returns:
+        list: the same format as the input but transformed
+    '''
+    
+    sign = ["+", "-", None]
+    weights = [0.45, 0.45, 0.1]
+    new_coord = list    ()
+
+    for coord in point:
+        unit = choice([1,2])
+        dir = choices(sign, weights= weights)[0]
+        if dir == '+':
+            new_coord.append(coord+unit)
+        elif dir == '-':
+            new_coord.append(coord-unit)
+        else:
+            new_coord.append(coord)
+    
+    return new_coord
+
+
+
+
 
 def get_gate_loc(data_path: str, image_name: str):
     """
@@ -80,3 +113,8 @@ def show_images(img_list, titles=None, figsize=(15, 5)):
         plt.axis('off')
     
     plt.show()
+
+
+# for i in range(10):
+#     coord = [3, 4]
+#     print(transform_point(coord))
