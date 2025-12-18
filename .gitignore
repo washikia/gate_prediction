@@ -10,8 +10,22 @@ __pycache__/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# Data files (adjust folder name as needed)
-data/
+# Ignore everything under data
+data/*
+
+# Allow Git to traverse data
+!data/
+
+# Allow raw directory and EVERYTHING under it (recursively)
+!data/raw/
+!data/raw/**
+
+# Allow labels directory and specific file
+!data/labels/
+!data/labels/annotations.json
+
+
+
 *.csv
 *.tsv
 *.xlsx
