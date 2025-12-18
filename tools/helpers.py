@@ -23,11 +23,12 @@ def transform_point(point: list) -> list:
     new_coord = list    ()
 
     for coord in point:
-        unit = choice([1,2])
         dir = choices(sign, weights= weights)[0]
         if dir == '+':
+            unit = choice([1,2])
             new_coord.append(coord+unit)
         elif dir == '-':
+            unit = choice([1,2])
             new_coord.append(coord-unit)
         else:
             new_coord.append(coord)

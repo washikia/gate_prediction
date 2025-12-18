@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import glob
 import cv2 as cv
-from tools.helpers import get_gate_loc, add_label, save_tv_image, transform_point
+from tools.helpers import get_gate_loc, add_label, save_tv_image, transform_point, show_images
 import numpy as np
 from PIL import Image
 
@@ -93,7 +93,7 @@ class DeterministicZoom(v2.Transform):
 
 
 
-class aspectratio_preserving_Resize(v2.Transform):
+class AspectRatioPreservingResize(v2.Transform):
     '''
     TorchVision v2-compatible transform that can be passed to v2.Compose
     It Resizes Image and KeyPoints only, and preserves aspect ratio
@@ -186,7 +186,6 @@ class aspectratio_preserving_Resize(v2.Transform):
             value=(0,0,0)
         )
 
-        # Verify size
         padded_tensor = torch.from_numpy(padded).unsqueeze(0)  # C, H, W
 
         return tv_tensors.Image(padded_tensor)
@@ -241,7 +240,7 @@ def transform_fixed_rotation(image: tv_tensors.Image, labels: tv_tensors.KeyPoin
     transforms = v2.Compose([
         v2.Pad([15,29], fill=0),
         v2.RandomRotation((angle, angle)),
-        aspectratio_preserving_Resize()
+        AspectRatioPreservingResize()
     ])
 
     # After transforms, labels may no longer be a KeyPoints subclass.
@@ -797,8 +796,41 @@ def generate_transformed_dataset(input_root: str):
         print("passed")
 
 
+transforms =  v2.Compose([
+    v2.RandomChoice([
+        v2.RandomAffine(
+            degrees=0,
+            translate=(3/512, 3/256)
+        ),
+        v2.RandomRotation((-3,3)),
+        v2.Identity()
+    ])
+])
+
 
 
 if __name__ == "__main__":
-    generate_transformed_dataset("D:\\washik_personal\\projects\\gate_prediction\\data\\toy")
+    # generate_transformed_dataset("D:\\washik_personal\\projects\\gate_prediction\\data\\toy")
+    imgp =  "D:\\washik_personal\\projects\\gate_prediction\\data\\toy\\2021\\with_gate\\21M4880D_front.png"
+    img = Image.open(imgp)
+    label_path = 'D:\\washik_personal\\projects\\gate_prediction\\data\\labels\\annotations.json'
+    label = get_gate_loc(label_path, "21M4880D_front.png")
+    print(label)
+    pair = {
+        "img": tv_tensors.Image(img),
+        "label": tv_tensors.KeyPoints(label, canvas_size=(256, 512))
+    }
+
+    image_list = [img]
+    titles = [label]
+    transform_ = transforms
+
+    for _ in range(5):
+        transformed_data = transform_(pair)
+        transformed_img = transformed_data["img"]
+        image_list.append(transformed_img.permute(1, 2, 0).numpy())
+        titles.append(np.asarray(transformed_data["label"]).tolist())
+    
+    print(titles)
+    show_images(image_list, titles)
 
