@@ -322,7 +322,8 @@ def generate_transformed_dataset(input_root: str):
     
     '''
     input_root_path = Path(input_root)
-    output_path = input_root_path.parent / "final_dataset"
+    # output_path = input_root_path.parent / "final_dataset"
+    output_path = Path("D:\\washik_personal\\projects\\Unet\\unet-pytorch\\data\\inputs")
     output_path.mkdir(parents=True, exist_ok=True)
 
     kp_jitter_transform = RandomKeyPointJitter()
@@ -331,26 +332,25 @@ def generate_transformed_dataset(input_root: str):
         img_path = year / "without_gate"
         for img_name in img_path.glob("*.png"):
             img = cv.imread(str(img_name), cv.IMREAD_GRAYSCALE)
-            img_name = img_name.name    # keep this var: img_name -> it contains the extension .png
+            img_filename = img_name.name    # original filename with extension
+            img_stem = Path(img_filename).stem
 
             # check if the image has a label
             label_path = input_root_path.parent / "labels" / "toy.json"
-            label = get_gate_loc(label_path, img_name)
+            label = get_gate_loc(label_path, img_filename)
             assert label is not None
 
-
-            # 1. save the grayscale image with same name without year
             img = mold_background_to_black(img)  # keep this var: img -> get other transforms from this
-            save_path = output_path / img_name
+            save_path = output_path / f"{img_stem}.tif"
             cv.imwrite(str(save_path), img)
 
             labels_kp = tv_tensors.KeyPoints(data=label, canvas_size=(256,512))
-            img_name_ = img_name.replace('.png', '')  # remove extension
+            img_name_ = img_stem  # base filename without extension
 
             # 1.2 keypoint jitter of 1
             lb_jitter = kp_jitter_transform(labels_kp)
             lb_jitter = np.asarray(lb_jitter).tolist()
-            save_name = img_name_ + "_jitter.png"
+            save_name = img_name_ + "_jitter.tif"
             save_path_ = output_path / save_name
             cv.imwrite(str(save_path_), img)
             add_label(label_path, save_name, lb_jitter)
@@ -359,7 +359,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 2. fixed roation +8 of the image and labels
             img_rotated_p8, labels_rotated_p8 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, 8)
-            save_name = img_name_ + "_rotated_p8.png"
+            save_name = img_name_ + "_rotated_p8.tif"
             save_path_ = output_path / save_name
             save_tv_image(img_rotated_p8, save_path_)
             labels_list = np.asarray(labels_rotated_p8).tolist()
@@ -368,7 +368,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 2.2 keypoint jitter to 2
             lb_jitter = kp_jitter_transform(labels_rotated_p8)
-            save_name = img_name_ + "_rotated_p8_jitter.png"
+            save_name = img_name_ + "_rotated_p8_jitter.tif"
             save_path_ = output_path / save_name
             save_tv_image(img_rotated_p8, save_path_)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -377,7 +377,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 3. fixed roation -8 of the image and labels
             img_rotated_n8, labels_rotated_n8 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, -8)
-            save_name = img_name_ + "_rotated_n8.png"
+            save_name = img_name_ + "_rotated_n8.tif"
             save_path_ = output_path / save_name
             save_tv_image(img_rotated_n8, save_path_)
             labels_list = np.asarray(labels_rotated_n8).tolist()
@@ -386,7 +386,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 3.2 keypoint jitter on 3
             lb_jitter = kp_jitter_transform(labels_rotated_n8)
-            save_name = img_name_ + "_rotated_n8_jitter.png"
+            save_name = img_name_ + "_rotated_n8_jitter.tif"
             save_path_ = output_path / save_name
             save_tv_image(img_rotated_n8, save_path_)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -394,7 +394,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 4. fixed rotation +17 of the image and labels
             img_rotated_p17, labels_rotated_p17 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, 17)
-            save_name = img_name_ + "_rotated_p17.png"
+            save_name = img_name_ + "_rotated_p17.tif"
             save_path_ = output_path / save_name
             save_tv_image(img_rotated_p17, save_path_)
             labels_list = np.asarray(labels_rotated_p17).tolist()
@@ -403,7 +403,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 4.2 keypoint jitter on rotated +17
             lb_jitter = kp_jitter_transform(labels_rotated_p17)
-            save_name = img_name_ + "_rotated_p17_jitter.png"
+            save_name = img_name_ + "_rotated_p17_jitter.tif"
             save_path_ = output_path / save_name
             save_tv_image(img_rotated_p17, save_path_)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -412,7 +412,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 5. fixed rotation -17 of the image and labels
             img_rotated_n17, labels_rotated_n17 = transform_fixed_rotation(tv_tensors.Image(img), labels_kp, -17)
-            save_name = img_name_ + "_rotated_n17.png"
+            save_name = img_name_ + "_rotated_n17.tif"
             save_path_ = output_path / save_name
             save_tv_image(img_rotated_n17, save_path_)
             labels_list = np.asarray(labels_rotated_n17).tolist()
@@ -421,7 +421,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 5.2 keypoint jitter on rotated -17
             lb_jitter = kp_jitter_transform(labels_rotated_n17)
-            save_name = img_name_ + "_rotated_n17_jitter.png"
+            save_name = img_name_ + "_rotated_n17_jitter.tif"
             save_path_ = output_path / save_name
             save_tv_image(img_rotated_n17, save_path_)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -434,7 +434,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 6. fixed zoom-in 5% on original grayscale
             zoomedin5 = zoomin5({"img": tv_tensors.Image(img), "labels": labels_kp})
-            save_name = img_name_ + "_zoomed_in_5p.png"
+            save_name = img_name_ + "_zoomed_in_5p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedin5["img"], save_path)
             labels_list = np.asarray(zoomedin5["labels"]).tolist()
@@ -442,7 +442,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 6.2 keypoint jitter on zoom-in 5%
             lb_jitter = kp_jitter_transform(zoomedin5["labels"])
-            save_name = img_name_ + "_zoomed_in_5p_jitter.png"
+            save_name = img_name_ + "_zoomed_in_5p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedin5["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -451,7 +451,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 7. fixed zoom out 10% on original grayscale
             zoomedout10 = zoomout10({"img": tv_tensors.Image(img), "labels": labels_kp})
-            save_name = img_name_ + "_zoomed_out_10p.png"
+            save_name = img_name_ + "_zoomed_out_10p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedout10["img"], save_path)
             labels_list = np.asarray(zoomedout10["labels"]).tolist()
@@ -460,7 +460,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 7.2 keypoint jitter on zoom-out 10%
             lb_jitter = kp_jitter_transform(zoomedout10["labels"])
-            save_name = img_name_ + "_zoomed_out_10p_jitter.png"
+            save_name = img_name_ + "_zoomed_out_10p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedout10["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -469,7 +469,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 8. fixed zoom in 5% on (2) 8 degree anticlockwise rotation
             zoomedin5rotatedp8 = zoomin5({"img": img_rotated_p8, "labels": labels_rotated_p8})
-            save_name = img_name_ + "_zoomed_in_rotated_p8_5p.png"
+            save_name = img_name_ + "_zoomed_in_rotated_p8_5p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedin5rotatedp8["img"], save_path)
             labels_list = np.asarray(zoomedin5rotatedp8["labels"]).tolist()
@@ -478,7 +478,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 8.2 keypoint jitter on zoom-in 5% + rotated p8
             lb_jitter = kp_jitter_transform(zoomedin5rotatedp8["labels"])
-            save_name = img_name_ + "_zoomed_in_rotated_p8_5p_jitter.png"
+            save_name = img_name_ + "_zoomed_in_rotated_p8_5p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedin5rotatedp8["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -487,7 +487,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 9. fixed zoom out 10% on (2) 8 degree anticlockwise rotation
             zoomedout10rotatedp8 = zoomout10({"img": img_rotated_p8, "labels": labels_rotated_p8})
-            save_name = img_name_ + "_zoomed_out_rotated_p8_10p.png"
+            save_name = img_name_ + "_zoomed_out_rotated_p8_10p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedout10rotatedp8["img"], save_path)
             labels_list = np.asarray(zoomedout10rotatedp8["labels"]).tolist()
@@ -496,7 +496,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 9.2 keypoint jitter on zoom-out 10% + rotated p8
             lb_jitter = kp_jitter_transform(zoomedout10rotatedp8["labels"])
-            save_name = img_name_ + "_zoomed_out_rotated_p8_10p_jitter.png"
+            save_name = img_name_ + "_zoomed_out_rotated_p8_10p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedout10rotatedp8["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -505,7 +505,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 10. fixed zoom in 5% on (3) 8 degree clockwise rotation
             zoomedin5rotatedn8 = zoomin5({"img": img_rotated_n8, "labels": labels_rotated_n8})
-            save_name = img_name_ + "_zoomed_in_rotated_n8_5p.png"
+            save_name = img_name_ + "_zoomed_in_rotated_n8_5p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedin5rotatedn8["img"], save_path)
             labels_list = np.asarray(zoomedin5rotatedn8["labels"]).tolist()
@@ -514,7 +514,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 10.2 keypoint jitter on zoom-in 5% + rotated n8
             lb_jitter = kp_jitter_transform(zoomedin5rotatedn8["labels"])
-            save_name = img_name_ + "_zoomed_in_rotated_n8_5p_jitter.png"
+            save_name = img_name_ + "_zoomed_in_rotated_n8_5p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedin5rotatedn8["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -523,7 +523,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 11. fixed zoom out 10% on (3) 8 degree clockwise rotation
             zoomedout10rotatedn8 = zoomout10({"img": img_rotated_n8, "labels": labels_rotated_n8})
-            save_name = img_name_ + "_zoomed_out_rotated_n8_10p.png"
+            save_name = img_name_ + "_zoomed_out_rotated_n8_10p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedout10rotatedn8["img"], save_path)
             labels_list = np.asarray(zoomedout10rotatedn8["labels"]).tolist()
@@ -532,7 +532,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 11.2 keypoint jitter on zoom-out 10% + rotated n8
             lb_jitter = kp_jitter_transform(zoomedout10rotatedn8["labels"])
-            save_name = img_name_ + "_zoomed_out_rotated_n8_10p_jitter.png"
+            save_name = img_name_ + "_zoomed_out_rotated_n8_10p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomedout10rotatedn8["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -541,7 +541,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 12. fixed zoom in 5% on (4) 17 degree anticlockwise rotation
             zoomed_in_5_rotated_p17 = zoomin5({"img": img_rotated_p17, "labels": labels_rotated_p17})
-            save_name = img_name_ + "_zoomed_in_rotated_p17_5p.png"
+            save_name = img_name_ + "_zoomed_in_rotated_p17_5p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomed_in_5_rotated_p17["img"], save_path)
             labels_list = np.asarray(zoomed_in_5_rotated_p17["labels"]).tolist()
@@ -550,7 +550,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 12.2 keypoint jitter on zoom-in 5% + rotated p17
             lb_jitter = kp_jitter_transform(zoomed_in_5_rotated_p17["labels"])
-            save_name = img_name_ + "_zoomed_in_rotated_p17_5p_jitter.png"
+            save_name = img_name_ + "_zoomed_in_rotated_p17_5p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomed_in_5_rotated_p17["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -559,7 +559,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 13. fixed zoom out 10% on (4) 17 degree anticlockwise rotation
             zoomed_out_10_rotated_p17 = zoomout10({"img": img_rotated_p17, "labels": labels_rotated_p17})
-            save_name = img_name_ + "_zoomed_out_rotated_p17_10p.png"
+            save_name = img_name_ + "_zoomed_out_rotated_p17_10p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomed_out_10_rotated_p17["img"], save_path)
             labels_list = np.asarray(zoomed_out_10_rotated_p17["labels"]).tolist()
@@ -568,7 +568,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 13.2 keypoint jitter on zoom-out 10% + rotated p17
             lb_jitter = kp_jitter_transform(zoomed_out_10_rotated_p17["labels"])
-            save_name = img_name_ + "_zoomed_out_rotated_p17_10p_jitter.png"
+            save_name = img_name_ + "_zoomed_out_rotated_p17_10p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomed_out_10_rotated_p17["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -577,7 +577,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 14. fixed zoom in 5% on (5) 17 degree clockwise rotation
             zoomed_in_5_rotated_n17 = zoomin5({"img": img_rotated_n17, "labels": labels_rotated_n17})
-            save_name = img_name_ + "_zoomed_in_rotated_n17_5p.png"
+            save_name = img_name_ + "_zoomed_in_rotated_n17_5p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomed_in_5_rotated_n17["img"], save_path)
             labels_list = np.asarray(zoomed_in_5_rotated_n17["labels"]).tolist()
@@ -586,7 +586,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 14.2 keypoint jitter on zoom-in 5% + rotated n17
             lb_jitter = kp_jitter_transform(zoomed_in_5_rotated_n17["labels"])
-            save_name = img_name_ + "_zoomed_in_rotated_n17_5p_jitter.png"
+            save_name = img_name_ + "_zoomed_in_rotated_n17_5p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomed_in_5_rotated_n17["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -595,7 +595,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 15. fixed zoom out 10% on (5) 17 degree clockwise rotation
             zoomed_out_10_rotated_n17 = zoomout10({"img": img_rotated_n17, "labels": labels_rotated_n17})
-            save_name = img_name_ + "_zoomed_out_rotated_n17_10p.png"
+            save_name = img_name_ + "_zoomed_out_rotated_n17_10p.tif"
             save_path = output_path / save_name
             save_tv_image(zoomed_out_10_rotated_n17["img"], save_path)
             labels_list = np.asarray(zoomed_out_10_rotated_n17["labels"]).tolist()
@@ -603,7 +603,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 15.2 keypoint jitter on zoom-out 10% + rotated n17
             lb_jitter = kp_jitter_transform(zoomed_out_10_rotated_n17["labels"])
-            save_name = img_name_ + "_zoomed_out_rotated_n17_10p_jitter.png"
+            save_name = img_name_ + "_zoomed_out_rotated_n17_10p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(zoomed_out_10_rotated_n17["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -615,7 +615,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 16. fixed horizontal flip on (1) the original gray scale
             horizontally_flipped = horizontal_flip({"img": tv_tensors.Image(img), "labels": labels_kp})
-            save_name = img_name_ + "_horizontal_flip.png"
+            save_name = img_name_ + "_horizontal_flip.tif"
             save_path = output_path / save_name
             save_tv_image(horizontally_flipped["img"], save_path)
             labels_list = np.asarray(horizontally_flipped["labels"]).tolist()
@@ -624,7 +624,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 16.2 keypoint jitter on horizontal flip
             lb_jitter = kp_jitter_transform(horizontally_flipped["labels"])
-            save_name = img_name_ + "_horizontal_flip_jitter.png"
+            save_name = img_name_ + "_horizontal_flip_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(horizontally_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -633,7 +633,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 17. fixed vertical flip on (2) the original gray scale
             vertically_flipped = vertical_flip({"img": tv_tensors.Image(img), "labels": labels_kp})
-            save_name = img_name_ + "_vertical_flip.png"
+            save_name = img_name_ + "_vertical_flip.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -642,7 +642,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 17.2 keypoint jitter on vertical flip
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_jitter.png"
+            save_name = img_name_ + "_vertical_flip_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -651,7 +651,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 18. fixed vertical flip on (2) rotated 8 degree anticlockwise
             vertically_flipped = vertical_flip({"img": img_rotated_p8, "labels": labels_rotated_p8})
-            save_name = img_name_ + "_vertical_flip_rotate_p8.png"
+            save_name = img_name_ + "_vertical_flip_rotate_p8.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -660,7 +660,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 18.2 keypoint jitter on vertical flip + rotated p8
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_rotate_p8_jitter.png"
+            save_name = img_name_ + "_vertical_flip_rotate_p8_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -669,7 +669,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 19. fixed vertical flip on (3) rotated 8 degree clockwise
             vertically_flipped = vertical_flip({"img": tv_tensors.Image(img_rotated_n8), "labels": labels_rotated_n8})
-            save_name = img_name_ + "_vertical_flip_rotate_n8.png"
+            save_name = img_name_ + "_vertical_flip_rotate_n8.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -678,7 +678,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 19.2 keypoint jitter on vertical flip + rotated n8
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_rotate_n8_jitter.png"
+            save_name = img_name_ + "_vertical_flip_rotate_n8_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -687,7 +687,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 20. fixed vertical flip on (4) rotated anticlockwise 17
             vertically_flipped = vertical_flip({"img": img_rotated_p17, "labels": labels_rotated_p17})
-            save_name = img_name_ + "_vertical_flip_rotate_p17.png"
+            save_name = img_name_ + "_vertical_flip_rotate_p17.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -696,7 +696,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 20.2 keypoint jitter on vertical flip + rotated p17
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_rotate_p17_jitter.png"
+            save_name = img_name_ + "_vertical_flip_rotate_p17_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -705,7 +705,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 21. fixed vertical flip on (5) rotated clockwise 17
             vertically_flipped = vertical_flip({"img": img_rotated_n17, "labels": labels_rotated_n17})
-            save_name = img_name_ + "_vertical_flip_rotate_n17.png"
+            save_name = img_name_ + "_vertical_flip_rotate_n17.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -714,7 +714,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 21.2 keypoint jitter on vertical flip + rotated n17
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_rotate_n17_jitter.png"
+            save_name = img_name_ + "_vertical_flip_rotate_n17_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -723,7 +723,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 22. fixed vertical flip on (14) rotated 17 degree clockwise and zoomed in 5% 
             vertically_flipped = vertical_flip({"img": zoomed_in_5_rotated_n17["img"], "labels": zoomed_in_5_rotated_n17["labels"]})
-            save_name = img_name_ + "vertical_flip_zoomed_in_rotated_n17_5p.png"
+            save_name = img_name_ + "vertical_flip_zoomed_in_rotated_n17_5p.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -732,7 +732,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 22.2 keypoint jitter on vertical flip + zoom-in 5% + rotated n17
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_zoomed_in_rotated_n17_5p_jitter.png"
+            save_name = img_name_ + "_vertical_flip_zoomed_in_rotated_n17_5p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -741,7 +741,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 23. fixed vertical flip on (15) rotated 17 degree clockwise
             vertically_flipped = vertical_flip({"img": zoomed_out_10_rotated_n17["img"], "labels": zoomed_out_10_rotated_n17["labels"]})
-            save_name = img_name_ + "vertical_flip_zoomed_out_rotated_n17_10p.png"
+            save_name = img_name_ + "vertical_flip_zoomed_out_rotated_n17_10p.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -750,7 +750,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 23.2 keypoint jitter on vertical flip + zoom-out 10% + rotated n17
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_zoomed_out_rotated_n17_10p_jitter.png"
+            save_name = img_name_ + "_vertical_flip_zoomed_out_rotated_n17_10p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -759,7 +759,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 24. fixed vertical flip on (12) 5% zoom in and 17 degree anticlockwise rotation
             vertically_flipped = vertical_flip({"img": zoomed_in_5_rotated_p17["img"], "labels": zoomed_in_5_rotated_p17["labels"]})
-            save_name = img_name_ + "vertical_flip_zoomed_in_rotated_p17_5p.png"
+            save_name = img_name_ + "vertical_flip_zoomed_in_rotated_p17_5p.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -768,7 +768,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 24.2 keypoint jitter on vertical flip + zoom-in 5% + rotated p17
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_zoomed_in_rotated_p17_5p_jitter.png"
+            save_name = img_name_ + "_vertical_flip_zoomed_in_rotated_p17_5p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -777,7 +777,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 25. fixed vertical flip on (13) 10% zoom out and 17 degree anticlockwise rotation
             vertically_flipped = vertical_flip({"img":zoomed_out_10_rotated_p17["img"], "labels": zoomed_out_10_rotated_p17["labels"]})
-            save_name = img_name_ + "vertical_flip__zoomed_out_rotated_p17_10p.png"
+            save_name = img_name_ + "vertical_flip__zoomed_out_rotated_p17_10p.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             labels_list = np.asarray(vertically_flipped["labels"]).tolist()
@@ -786,7 +786,7 @@ def generate_transformed_dataset(input_root: str):
 
             # 25.2 keypoint jitter on vertical flip + zoom-out 10% + rotated p17
             lb_jitter = kp_jitter_transform(vertically_flipped["labels"])
-            save_name = img_name_ + "_vertical_flip_zoomed_out_rotated_p17_10p_jitter.png"
+            save_name = img_name_ + "_vertical_flip_zoomed_out_rotated_p17_10p_jitter.tif"
             save_path = output_path / save_name
             save_tv_image(vertically_flipped["img"], save_path)
             lb_jitter = np.asarray(lb_jitter).tolist()
@@ -810,27 +810,27 @@ transforms =  v2.Compose([
 
 
 if __name__ == "__main__":
-    # generate_transformed_dataset("D:\\washik_personal\\projects\\gate_prediction\\data\\toy")
-    imgp =  "D:\\washik_personal\\projects\\gate_prediction\\data\\toy\\2021\\with_gate\\21M4880D_front.png"
-    img = Image.open(imgp)
-    label_path = 'D:\\washik_personal\\projects\\gate_prediction\\data\\labels\\annotations.json'
-    label = get_gate_loc(label_path, "21M4880D_front.png")
-    print(label)
-    pair = {
-        "img": tv_tensors.Image(img),
-        "label": tv_tensors.KeyPoints(label, canvas_size=(256, 512))
-    }
+    generate_transformed_dataset("D:\\washik_personal\\projects\\gate_prediction\\data\\toy")
+    # imgp =  "D:\\washik_personal\\projects\\gate_prediction\\data\\toy\\2021\\with_gate\\21M4880D_front.png"
+    # img = Image.open(imgp)
+    # label_path = 'D:\\washik_personal\\projects\\gate_prediction\\data\\labels\\annotations.json'
+    # label = get_gate_loc(label_path, "21M4880D_front.png")
+    # print(label)
+    # pair = {
+    #     "img": tv_tensors.Image(img),
+    #     "label": tv_tensors.KeyPoints(label, canvas_size=(256, 512))
+    # }
 
-    image_list = [img]
-    titles = [label]
-    transform_ = transforms
+    # image_list = [img]
+    # titles = [label]
+    # transform_ = transforms
 
-    for _ in range(5):
-        transformed_data = transform_(pair)
-        transformed_img = transformed_data["img"]
-        image_list.append(transformed_img.permute(1, 2, 0).numpy())
-        titles.append(np.asarray(transformed_data["label"]).tolist())
+    # for _ in range(5):
+    #     transformed_data = transform_(pair)
+    #     transformed_img = transformed_data["img"]
+    #     image_list.append(transformed_img.permute(1, 2, 0).numpy())
+    #     titles.append(np.asarray(transformed_data["label"]).tolist())
     
-    print(titles)
-    show_images(image_list, titles)
+    # print(titles)
+    # show_images(image_list, titles)
 

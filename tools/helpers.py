@@ -116,6 +116,43 @@ def show_images(img_list, titles=None, figsize=(15, 5)):
     plt.show()
 
 
+import matplotlib.pyplot as plt
+
+def show_images_and_gates(images, labels=None, ncols=5):
+    """
+    images: list or batch of images (C,H,W) or (H,W,C)
+    labels: list of keypoints per image, format [[a,b],[c,d],...]
+    """
+    n = len(images)
+    nrows = (n + ncols - 1) // ncols
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4*ncols, 4*nrows))
+    axes = axes.flatten()
+
+    for i, ax in enumerate(axes):
+        if i >= n:
+            ax.axis("off")
+            continue
+
+        img = images[i]
+
+        # convert (C,H,W) -> (H,W,C) if needed
+        if img.ndim == 3 and img.shape[0] in [1, 3]:
+            img = img.permute(1, 2, 0)
+
+        ax.imshow(img)
+        ax.axis("off")
+
+        # draw labels if provided
+        if labels is not None:
+            keypoints = labels[i]  # [[x1,y1],[x2,y2],...]
+            for (x, y) in keypoints:
+                ax.plot(x, y, "ro", markersize=4)  # red dot
+
+    plt.tight_layout()
+    plt.show()
+
+
 # for i in range(10):
 #     coord = [3, 4]
 #     print(transform_point(coord))
